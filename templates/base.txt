@@ -1,0 +1,12 @@
+Good Morning,
+
+These podcast episodes were downloaded:
+
+{% for podcast in podcasts %}
+    ~~{{ podcast.name }}~~
+    {% for episode in podcast.episodes %}
+        * {{ episode.title }}
+    {% endfor %}
+{% endfor %}
+
+Have a great day!

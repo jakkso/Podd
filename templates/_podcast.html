@@ -1,0 +1,28 @@
+<div class="panel panel-primary">
+    <div class="panel-heading">
+        <h3 class="panel-title"><img style="width: 150px; display: inline-block; margin-right: 10px;" src="{{ podcast.image }}">{{ podcast.name }}</h3>
+    </div>
+    <div class="panel-body">
+        {% for episode in podcast.episodes %} <!--TODO This needs to be fixed to work with new structure-->
+            <div class="panel panel-primary">  <!--TODO Update: I think this will work as is with the new structure -->
+                <div class="panel-heading">
+                    <h3 class="panel-title">{{ episode.title }}</h3>
+                </div>
+                <div class="panel-body">
+                    {% if episode.image is not none %}
+                         <div class="media">
+                         <a class="pull-left" href="#">
+                             <img class="media-object" src="{{ episode.image }}" alt="{{ episode.title }}" style="width: 100px;">
+                         </a>
+                         <div class="media-body">
+                             {{ episode.summary|safe }}
+                         </div>
+                         </div>
+                    {% else %}
+                        {{ episode.summary|safe }}
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
