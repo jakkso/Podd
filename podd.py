@@ -1,7 +1,10 @@
 from argparse import ArgumentParser as Ag
 from datetime import datetime
 
-from classes import DB, Feed, Message, Podcast
+from database import DB
+from feed import Feed
+from message import Message
+from podcast import Podcast
 from config import Config
 
 
