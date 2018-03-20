@@ -182,24 +182,24 @@ class TestPodcast(unittest.TestCase):
         fp_mock.return_value = RYAN
         entry1 = RYAN.entries[0]
         with miscfunctions.Podcast(DATE, DIR_PATH, RYAN_URL, DATABASE) as pod:
-            self.assertIsNotNone(pod._episode_image(entry1))
+            self.assertIsNotNone(pod._episode_image_link(entry1))
         fp_mock.return_value = PETERSON
         entry2 = PETERSON.entries[0]
         with miscfunctions.Podcast(DATE, DIR_PATH, '', DATABASE) as pod:
-            self.assertIsNone(pod._episode_image(entry2))
+            self.assertIsNone(pod._episode_image_link(entry2))
 
     @patch('feedparser.parse')
     def test_episode_link(self, mock_obj):
         mock_obj.return_value = RYAN
         for entry in RYAN.entries:
             with miscfunctions.Podcast(DATE, DIR_PATH, RYAN_URL, DATABASE) as pod:
-                self.assertIsNotNone(pod._episode_link(entry))
+                self.assertIsNotNone(pod._audio_file_link(entry))
         for entry in GOLD.entries:
             with miscfunctions.Podcast(DATE, DIR_PATH, RYAN_URL, DATABASE) as pod:
-                self.assertIsNotNone(pod._episode_link(entry))
+                self.assertIsNotNone(pod._audio_file_link(entry))
         for entry in PETERSON.entries:
             with miscfunctions.Podcast(DATE, DIR_PATH, RYAN_URL, DATABASE) as pod:
-                self.assertIsNotNone(pod._episode_link(entry))
+                self.assertIsNotNone(pod._audio_file_link(entry))
 
     @patch('feedparser.parse')
     def test_mp3_tagger(self, mock_obj):

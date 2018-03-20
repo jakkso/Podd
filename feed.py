@@ -5,46 +5,19 @@ import pathlib
 from time import mktime
 
 from database import DB
-from miscfunctions import logger
 
 
-class Feed:
-
-    __slots__ = ['database']
-
-    def __init__(self, database):
-        """
-        :param database: string, abs location of database file.
-        """
-        self.database = database
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}({self.database})'
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Calls logger function if there are exceptions
-        :param exc_type: exception type
-        :param exc_val:  exception value
-        :param exc_tb: exception traceback
-        :return: None
-        """
-        if exc_type is not None:
-            logger(exc_type, exc_val, exc_tb)
+class Feed(DB):
 
     def add(self, *urls):
         """
         Uses feedparser.parse(url) on each url in urls and if valid, adds to
         database and create download directory
-        :param urls:
+        :param urls: rss feed urls to add to subscription database
         :return: None
         """
-        with DB(self.database) as db:
-            podcasts = db.fetch_single_column('url')
-            option, base_directory = db.options()
+        podcasts = self.fetch_single_column('url')
+        option, base_directory = self.options()
         for url in urls:
             if url not in podcasts:
                 try:
@@ -60,7 +33,7 @@ class Feed:
                     if len(page) > 0:
                         podcast_name = page.feed.title
                         download_dir = path.join(base_directory, podcast_name)
-                        with DB(self.database) as db:
+                        with self as db:
                             db.add_podcast(podcast_name, url, download_dir, date)
                         pathlib.Path(base_directory).joinpath(podcast_name).\
                             mkdir(parents=True, exist_ok=True)
@@ -74,21 +47,21 @@ class Feed:
         a podcast from database.
         :return: None
         """
-        with DB(self.database) as db:
-            podcasts = {i[0]: i[1] for i in enumerate(db.fetch_single_column('name'))}
-            if len(podcasts) == 0:
-                print('You have no subscriptions!')
+        podcasts = {i[0]: i[1] for i in enumerate(self.fetch_single_column('name'))}
+        if len(podcasts) == 0:
+            print('You have no subscriptions!')
+            return
+        for num, podcast in podcasts.items():
+            print(f'{num}: {podcast}')
+        try:
+            choice = int(input('Podcast number to remove: '))
+            if choice not in podcasts:
+                print('Invalid option')
                 return
-            for num, podcast in podcasts.items():
-                print(f'{num}: {podcast}')
-            try:
-                choice = int(input('Podcast number to remove: '))
-                if choice not in podcasts:
-                    print('Invalid option')
-                    return
+            with self as db:
                 db.remove_podcast(podcasts[choice])
-            except ValueError:
-                print('Invalid Option, enter a number')
+        except ValueError:
+            print('Invalid Option, enter a number')
 
     @staticmethod
     def last_episode_only(episodes):
@@ -110,8 +83,7 @@ class Feed:
         Prints out current subscriptions, intended to be used with CLI.
         :return: if there are subscriptions, list of podcast names else None
         """
-        with DB(self.database) as db:
-            podcasts = db.fetch_single_column('name')
+        podcasts = self.fetch_single_column('name')
         if len(podcasts) > 0:
             print(' -- Current Subscriptions -- ')
             for podcast in podcasts:
@@ -128,12 +100,10 @@ class Feed:
         """
         valid_options = {0: 'New podcasts download all episodes\n',
                          1: 'New podcasts download only new episodes\n'}
-        with DB(self.database) as db:
-            new_only, download_directory = db.options()
+        new_only, download_directory = self.options()
         print('-- Options --')
-        print(f'{valid_options[new_only]}Download Directory: \
-        {download_directory}')
-        return new_only, download_directory
+        print(f'{valid_options[new_only]}Download Directory: {download_directory}')
+        print('-------------')
 
     def set_directory_option(self, directory):
         """
@@ -141,12 +111,10 @@ class Feed:
         :return: None
         """
         if access(directory, W_OK) and access(directory, R_OK):
-            with DB(self.database) as db:
+            with self as db:
                 db.change_option('base_directory', directory)
-            return True
         else:
             print('Invalid location')
-            return
 
     def set_catalog_option(self, option):
         """
@@ -157,7 +125,5 @@ class Feed:
 
         if option not in valid_options:
             print('Invalid option.  See help menu')
-            return
-        with DB(self.database) as db:
+        with self as db:
             db.change_option('new_only', valid_options[option])
-            return True

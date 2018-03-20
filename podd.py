@@ -49,10 +49,10 @@ def downloader():
     for subscription in subscriptions:
         url, directory, date = subscription
         date = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
-        with Podcast(date, directory, url, Config.database) as podcast:
+        with Podcast(Config.database, date, directory, url) as podcast:
             jinja_packet = podcast.downloader()
             if jinja_packet is not None:
-                downloads.append(podcast.downloader())
+                downloads.append(jinja_packet)
     if len(downloads) > 0:
         Message(downloads).send()
 

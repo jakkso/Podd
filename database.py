@@ -7,15 +7,13 @@ from miscfunctions import logger
 
 class DB:
 
-    __slots__ = ['database', 'conn', 'c']
-
     def __init__(self, database):
         """
         :param database: string, path to database file
         """
         self.database = database
         self.conn = sqlite3.connect(self.database)
-        self.c = self.conn.cursor()
+        self.cursor = self.conn.cursor()
 
     def __enter__(self):
         return self
@@ -38,14 +36,7 @@ class DB:
             self.conn.close()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}("{self.database}")'
-
-    def __str__(self):
-        return f'{self.__class__.__name__} using {self.database} file'
-
-    @property
-    def cursor(self):
-        return self.c
+        return f'{self.__class__.__name__}({self.database})'
 
     @staticmethod
     def create(database):
@@ -71,8 +62,8 @@ class DB:
         """
         :return: tuple of currently set options
         """
-        self.c.execute('SELECT new_only, base_directory FROM settings')
-        return self.c.fetchone()
+        self.cursor.execute('SELECT new_only, base_directory FROM settings')
+        return self.cursor.fetchone()
 
     def subscriptions(self):
         """
@@ -80,8 +71,8 @@ class DB:
         :return: list of 3-tuples, consisting of the url, download directory
         and latest download date of each podcast
         """
-        self.c.execute('SELECT url, directory, date FROM podcasts')
-        return self.c.fetchall()
+        self.cursor.execute('SELECT url, directory, date FROM podcasts')
+        return self.cursor.fetchall()
 
     def change_download_date(self, date, podcast_name):
         """
@@ -90,8 +81,8 @@ class DB:
         :param podcast_name: name of podcast
         :return: None
         """
-        self.c.execute('UPDATE podcasts SET date = ? WHERE name = ?',
-                       (date, podcast_name), )
+        self.cursor.execute('UPDATE podcasts SET date = ? WHERE name = ?',
+                            (date, podcast_name), )
 
     def change_option(self, option, value):
         """
@@ -105,15 +96,15 @@ class DB:
         :param value: string, option's new value
         :return: None
         """
-        self.c.execute(f'UPDATE settings SET {option} = ? WHERE id = 1', (value,))
+        self.cursor.execute(f'UPDATE settings SET {option} = ? WHERE id = 1', (value,))
 
     def fetch_single_column(self, column):
         """
         :param column: name of column to fetch
         :return: list of contents of said column
         """
-        self.c.execute(f'SELECT {column} FROM podcasts')
-        return [item[0] for item in self.c.fetchall()]
+        self.cursor.execute(f'SELECT {column} FROM podcasts')
+        return [item[0] for item in self.cursor.fetchall()]
 
     def add_podcast(self, podcast_name, feed_url, download_directory, date):
         """
@@ -124,11 +115,11 @@ class DB:
         :param date: download episodes newer than this date
         :return: None
         """
-        self.c.executemany('INSERT INTO podcasts VALUES (?,?,?,?)',
-                           ((podcast_name,
-                             feed_url,
-                             download_directory,
-                             date),))
+        self.cursor.executemany('INSERT INTO podcasts VALUES (?,?,?,?)',
+                                ((podcast_name,
+                                 feed_url,
+                                 download_directory,
+                                 date),))
 
     def remove_podcast(self, url):
         """
@@ -136,4 +127,5 @@ class DB:
         :param url: rss feed url
         :return: None
         """
-        self.c.execute('DELETE FROM podcasts WHERE url is ?', (url,))
+        self.cursor.execute('DELETE FROM podcasts WHERE name is ?', (url,))
+

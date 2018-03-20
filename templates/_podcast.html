@@ -3,8 +3,8 @@
         <h3 class="panel-title"><img style="width: 150px; display: inline-block; margin-right: 10px;" src="{{ podcast.image }}">{{ podcast.name }}</h3>
     </div>
     <div class="panel-body">
-        {% for episode in podcast.episodes %} <!--TODO This needs to be fixed to work with new structure-->
-            <div class="panel panel-primary">  <!--TODO Update: I think this will work as is with the new structure -->
+        {% for episode in podcast.episodes %}
+            <div class="panel panel-primary">
                 <div class="panel-heading">
                     <h3 class="panel-title">{{ episode.title }}</h3>
                 </div>
