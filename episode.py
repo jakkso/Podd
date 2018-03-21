@@ -15,6 +15,8 @@ class Episode(DB):
 
     types = ['.mp3', '.m4a', '.wav', '.mp4', '.m4v', '.mov', '.avi', '.wmv']
 
+    __slots__ = ['database', 'directory', 'entry', 'podcast_name']
+
     def __init__(self, database, directory, entry, podcast_name):
         DB.__init__(self, database)
         self.directory = directory

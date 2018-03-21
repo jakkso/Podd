@@ -24,7 +24,7 @@ class Feed(DB):
                     page = fp.parse(url)
                     episodes = page.entries
                     if len(episodes) == 0:
-                        print('No episodes found')
+                        print('No episodes found!')
                         return
                     if option == 1:
                         date = self.last_episode_only(episodes)
@@ -43,7 +43,7 @@ class Feed(DB):
 
     def remove(self):
         """
-        Intended to be used non-programmatically via CLI, used to remove a
+        Used to remove a
         a podcast from database.
         :return: None
         """
@@ -81,22 +81,20 @@ class Feed(DB):
     def print_subscriptions(self):
         """
         Prints out current subscriptions, intended to be used with CLI.
-        :return: if there are subscriptions, list of podcast names else None
+        :return: None
         """
         podcasts = self.fetch_single_column('name')
         if len(podcasts) > 0:
             print(' -- Current Subscriptions -- ')
             for podcast in podcasts:
                 print(podcast)
-            return podcasts
         else:
             print('You have no subscriptions!')
-            return
 
     def print_options(self):
         """
         Prints currently selected options
-        :return: options
+        :return: None
         """
         valid_options = {0: 'New podcasts download all episodes\n',
                          1: 'New podcasts download only new episodes\n'}
@@ -119,7 +117,7 @@ class Feed(DB):
     def set_catalog_option(self, option):
         """
         :param option: string, catalog option desired
-        :return: None if invalid option, True otherwise
+        :return: None
         """
         valid_options = {'all': 0, 'new': 1}
 

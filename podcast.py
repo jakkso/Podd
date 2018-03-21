@@ -12,9 +12,11 @@ class Podcast(DB):
 
     JinjaPacket = namedtuple('JinjaPacket', 'name link summary image episodes')
 
+    __slots__ = ['database', 'date', 'directory', 'url']
+
     def __init__(self, database, date, directory, url):
         """
-        :param date: datetime obj, gotten from database
+        :param date: datetime obj, obtained from database
         :param directory: string, download directory for this particular podcast
         :param url: string, rss feed url for this podcast
         :param database: string, location of database file
@@ -37,7 +39,7 @@ class Podcast(DB):
 
     def downloader(self):
         """
-        :return: JinjaPacket if episodes were downloaded, else None
+        :return: JinjaPacket if episodes were downloaded
         """
         episodes = [epi for epi in self.episodes()]
         if len(episodes) > 0:
