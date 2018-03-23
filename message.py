@@ -58,12 +58,12 @@ class Message:
         """
         msg = MIMEMultipart('alternative')
         msg['Subject'] = 'Podcast Download Report'
-        msg['From'] = Config.bot
+        msg['From'] = Config.sender
         msg['To'] = Config.recipient
         msg.attach(MIMEText(self.text, 'plain'))
         msg.attach(MIMEText(self.html, 'html'))
         server = smtplib.SMTP(host=Config.host, port=Config.port)
         server.starttls()
-        server.login(user=Config.bot, password=Config.pw)
-        server.sendmail(Config.bot, Config.recipient, msg.as_string())
+        server.login(user=Config.sender, password=Config.pw)
+        server.sendmail(Config.sender, Config.recipient, msg.as_string())
         server.quit()
