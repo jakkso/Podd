@@ -2,6 +2,7 @@ from datetime import datetime
 from os import path
 from time import mktime
 from urllib.request import urlretrieve
+from urllib.error import HTTPError
 
 import mutagen
 from mutagen.easyid3 import EasyID3
@@ -40,9 +41,12 @@ class Episode(DB):
         :return: None
         """
         print(f'Downloading {self.title}')
-        urlretrieve(self.file_link, filename=self.file)
-        with self as db:
-            db.change_download_date(self.publish_date, self.podcast_name)
+        try:
+            urlretrieve(self.file_link, filename=self.file)
+            with self as db:
+                db.change_download_date(self.publish_date, self.podcast_name)
+        except HTTPError:
+            pass
 
     def _episode_image_link(self):
         """
