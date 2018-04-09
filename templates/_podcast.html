@@ -14,12 +14,16 @@
                          <a class="pull-left" href="#">
                              <img class="media-object" src="{{ episode.image }}" alt="{{ episode.title }}" style="width: 100px;">
                          </a>
+                         {% if episode.summary is not none %}
                          <div class="media-body">
                              {{ episode.summary|safe }}
                          </div>
+                          {% endif %}
                          </div>
                     {% else %}
+                        {% if episode.summary is not none %}
                         {{ episode.summary|safe }}
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>

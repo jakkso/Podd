@@ -29,9 +29,12 @@ class Podcast(DB):
         self.parsed = fp.parse(self.url)
         self.name = self.parsed.feed.title
         self.link = self.parsed.feed.link
-        self.summary = self.parsed.feed.summary
         self.image = self.parsed.feed.image.href
         self.entries = self.parsed.entries
+        try:
+            self.summary = self.parsed.feed.summary
+        except AttributeError:
+            self.summary = None
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.database}, ' \
