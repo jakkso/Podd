@@ -14,12 +14,12 @@ from database import DB
 
 class Episode(DB):
 
-    types = ['.mp3', '.m4a', '.wav', '.mp4', '.m4v', '.mov', '.avi', '.wmv']
+    types = ('.mp3', '.m4a', '.wav', '.mp4', '.m4v', '.mov', '.avi', '.wmv')
 
     __slots__ = ['database', 'directory', 'entry', 'podcast_name']
 
-    def __init__(self, database, directory, entry, podcast_name):
-        DB.__init__(self, database)
+    def __init__(self, db_file, directory, entry, podcast_name):
+        DB.__init__(self, db_file)
         self.directory = directory
         self.entry = entry
         self.podcast_name = podcast_name
@@ -73,6 +73,7 @@ class Episode(DB):
         """
         :return: str, ex: path/to/podcast/directory/episode.m4a
         Defaults to .mp3 as that's the most common filetype
+        TODO This is hot garbage, there's got to be a better way that this insane hack
         """
         for ext in self.types:
             if ext in self.file_link:
