@@ -1,16 +1,23 @@
+"""
+Contains email message implementation
+"""
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from jinja2 import Environment, PackageLoader, select_autoescape
 import smtplib
+
+from jinja2 import Environment, PackageLoader, select_autoescape
 
 from config import Config
 
 
 class Message:
+    """
+    Email renderer and sender
+    """
 
     __slots__ = ['podcasts', 'text', 'html']
 
-    def __init__(self, podcasts):
+    def __init__(self, podcasts: list):
         """
         :param podcasts: a list of named tuples, made up of JinjaPackets, as
         described below, where name, link, summary and image are all attributes
@@ -50,7 +57,7 @@ class Message:
         template = env.get_template('base.txt')
         return template.render(podcasts=self.podcasts)
 
-    def send(self):
+    def send(self) -> None:
         """
         Creates an email using the above rendered html and text, logs into
         gmail and sends said email.

@@ -1,3 +1,6 @@
+"""
+Contains database and logging classes
+"""
 import datetime
 import logging
 from os import listdir, path
@@ -6,30 +9,26 @@ import sqlite3
 import traceback
 from types import TracebackType
 
+from config import Config
 
-class DB:
 
-    def __init__(self, db_file: str):
-        """
-        :param db_file: string, path to sqlite database file
-        """
-        self.database = db_file
-        self.conn = sqlite3.connect(self.database)
-        self.cursor = self.conn.cursor()
-        self.logger = logging.getLogger('database')
-        self.logger.setLevel(logging.DEBUG)
-        format_ = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        file_handler = logging.FileHandler('database.log')
-        file_handler.setLevel(logging.ERROR)
-        file_handler.setFormatter(format_)
-        self.logger.addHandler(file_handler)
+class Database:
+    """
+    Defines SQLite database creation and usage methods
+    """
+
+    def __init__(self):
+        self._db_file = Config.database
+        self._conn = sqlite3.connect(self._db_file)
+        self.cursor = self._conn.cursor()
+        self._logger = Logger('database')
 
     def __enter__(self):
         return self
 
     def __exit__(self,
-                 exc_type: BaseException,
-                 exc_val: str,
+                 exc_type,
+                 exc_val,
                  exc_tb: TracebackType):
         """
         If there are exceptions, rolls back and calls logger
@@ -39,37 +38,16 @@ class DB:
         :return: None
         """
         if exc_type is not None:
-            self.conn.rollback()
-            self.conn.close()
-            self.log_errors(exc_type, exc_val, exc_tb)
+            self._conn.rollback()
+            self._conn.close()
+            self._logger.error(exc_type, exc_val, exc_tb)
 
         else:
-            self.conn.commit()
-            self.conn.close()
+            self._conn.commit()
+            self._conn.close()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self.database})'
-
-    def log_errors(self,
-                   err_type: BaseException,
-                   err_value: str,
-                   traceback_: TracebackType,
-                   level=logging.ERROR) -> None:
-        """
-        Thanks to SO for help on this:
-        https://stackoverflow.com/questions/5191830/how-do-i-log-a-python-error-with-debug \
-        -information?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
-        :param err_type:
-        :param err_value:
-        :param traceback_:
-        :param level: logging level
-        :return: None
-        """
-        traceback_ = traceback.format_exception(err_type, err_value, traceback_)
-        traceback_lines = []
-        for line in [line.rstrip('\n') for line in traceback_]:
-            traceback_lines.extend(line.splitlines())
-        self.logger.log(level, traceback_lines.__str__())
+        return f'{self.__class__.__name__}({self._db_file})'
 
     @staticmethod
     def create(database: str) -> None:
@@ -82,14 +60,14 @@ class DB:
         files = [path.join(path.dirname(database), item) for item in
                  listdir(path.dirname(database))]
         if database not in files:
-            with DB(database) as db:
-                c = db.cursor
-                c.execute('CREATE TABLE IF NOT EXISTS podcasts \
+            with Database() as _db:
+                cur = _db.cursor
+                cur.execute('CREATE TABLE IF NOT EXISTS podcasts \
                              (name text, url text, directory text, date text)')
-                c.execute('CREATE TABLE IF NOT EXISTS settings \
+                cur.execute('CREATE TABLE IF NOT EXISTS settings \
                              (id INTEGER, new_only INTEGER, base_directory TEXT)')
-                c.execute('INSERT INTO settings VALUES (?,?,?)',
-                          (1, 1, path.join(pathlib.Path.home(), 'Podcasts')), )
+                cur.execute('INSERT INTO settings VALUES (?,?,?)',
+                            (1, 1, path.join(pathlib.Path.home(), 'Podcasts')), )
 
     def options(self) -> tuple:
         """
@@ -107,7 +85,7 @@ class DB:
         self.cursor.execute('SELECT url, directory, date FROM podcasts')
         return self.cursor.fetchall()
 
-    def change_download_date(self, date: datetime.date, podcast_name: str) -> None:
+    def change_download_date(self, date: datetime.datetime, podcast_name: str) -> None:
         """
         Changes download date for podcast name
         :param date: datetime object, coerced to a string
@@ -170,29 +148,26 @@ class DB:
 class Logger:
     """
     Used to log events
-    TODO change to be more abstract, accept kwargs to create loggers with
-    different levels / file handlers per logger.  Is this best practice?
-    Probably.
     """
 
     def __init__(self, log_name: str) -> logging.getLogger:
         """
         :param log_name: name of log
         """
-        self.log_name = log_name
-        self.logger = logging.getLogger(self.log_name)
-        self.logger.setLevel(logging.DEBUG)
+        self._log_name = log_name
+        self._logger = logging.getLogger(self._log_name)
+        self._logger.setLevel(logging.DEBUG)
         fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        file_hdlr = logging.FileHandler(f'{self.log_name}.log')
+        file_hdlr = logging.FileHandler(f'{self._log_name}.log')
         file_hdlr.setLevel(logging.DEBUG)
         file_hdlr.setFormatter(fmt)
-        self.logger.addHandler(file_hdlr)
+        self._logger.addHandler(file_hdlr)
 
-    def log(self,
-            err_type: BaseException,
-            err_value: str,
-            traceback_: TracebackType,
-            level=logging.ERROR) -> None:
+    def error(self,
+              err_type,
+              err_value,
+              traceback_: TracebackType,
+              level=logging.ERROR) -> None:
         """
         Thanks to SO for help on this:
         https://stackoverflow.com/questions/5191830/how-do-i-log-a-python-error-with-debug \
@@ -207,4 +182,18 @@ class Logger:
         traceback_lines = []
         for line in [line.rstrip('\n') for line in traceback_]:
             traceback_lines.extend(line.splitlines())
-        self.logger.log(level, traceback_lines.__str__())
+        self._logger.log(level, traceback_lines.__str__())
+
+    def info(self, msg: str) -> None:
+        """
+        :param msg: str
+        :return: None
+        """
+        self._logger.info(msg)
+
+    def warning(self, msg: str) -> None:
+        """
+        :param msg: str
+        :return: None
+        """
+        self._logger.warning(msg)

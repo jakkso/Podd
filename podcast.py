@@ -4,28 +4,38 @@ from time import mktime
 
 import feedparser as fp
 
-from database import DB
 from episode import Episode
 
 
-class Podcast(DB):
+class Podcast:
 
     JinjaPacket = namedtuple('JinjaPacket', 'name link summary image episodes')
 
-    __slots__ = ['database', 'date', 'directory', 'url']
+    __slots__ = ['database',
+                 'last_download_date',
+                 'directory',
+                 'url',
+                 'logger',
+                 'parsed',
+                 'name',
+                 'link',
+                 'image',
+                 'entries',
+                 'summary']
 
-    def __init__(self, db_file, date, directory, url):
+    def __init__(self, database, date, directory, url, logger):
         """
+        :param database: str: path to database file
         :param date: datetime obj, obtained from database
         :param directory: string, download directory for this particular podcast
         :param url: string, rss feed url for this podcast
-        :param db_file: string, location of database file
+        :param logger: Logger object, passed to Episode instantiations
         """
-
-        DB.__init__(self, db_file)
+        self.database = database
         self.last_download_date = date
         self.directory = directory
         self.url = url
+        self.logger = logger
         self.parsed = fp.parse(self.url)
         self.name = self.parsed.feed.title
         self.link = self.parsed.feed.link
@@ -38,9 +48,10 @@ class Podcast(DB):
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.database}, ' \
-               f'{self.last_download_date}, {self.directory}, {self.url})'
+               f'{self.last_download_date}, {self.directory}, {self.url},' \
+               f'{self.logger})'
 
-    def downloader(self):
+    def downloader(self) -> JinjaPacket or None:
         """
         :return: JinjaPacket if episodes were downloaded
         """
@@ -51,11 +62,12 @@ class Podcast(DB):
     def episodes(self):
         """
         Parses feedparser.parse(url).entries, downloads and tags files
-        :yield: Episode objects for use in jinja templates
+        :yield: Episode object for use in jinja templates
         """
         for entry in self.entries:
             if self.last_download_date < datetime.fromtimestamp(mktime(entry.published_parsed)):
-                episode = Episode(self.database, self.directory, entry, self.name)
-                episode.downloader()
-                episode.tagger()
-                yield episode
+                yield Episode(self.database,
+                              self.directory,
+                              entry,
+                              self.name,
+                              self.logger)
