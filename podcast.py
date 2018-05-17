@@ -116,7 +116,7 @@ class Episode:
     def __init__(self, directory: str, entry, podcast_name: str):
         """
         :param directory:
-        :param entry:
+        :param entry: single item from fp.parse(url).entries list
         :param podcast_name:
         """
         self._database = Database
@@ -135,7 +135,7 @@ class Episode:
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self._directory},' f'{self._entry}, ' \
-               f'{self._podcast_name}, {self._logger})'
+               f'{self._podcast_name})'
 
     def download(self) -> None:
         """
@@ -149,9 +149,10 @@ class Episode:
                 _db.change_download_date(self._publish_date, self._podcast_name)
             self._logger.info(f'Downloaded {self._file}')
         except HTTPError:
-            self._logger.exception(f'Unable to connect to download {self.title}')
+            self._logger.exception(f'Connection error; unable to download {self.title}')
         except FileNotFoundError:
-            self._logger.exception(f'Unable to open file or directory at {self._file}')
+            self._logger.exception(f'Unable to open file or directory at {self._file}.'
+                                   f'  Probably because parent directory missing.')
 
     def tag(self) -> None:
         """

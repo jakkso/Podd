@@ -12,7 +12,7 @@ from config import Config
 
 class Message:
     """
-    Email renderer and sender
+    Email renderer and sender-er
     """
 
     __slots__ = ['podcasts', 'text', 'html']

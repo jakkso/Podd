@@ -20,7 +20,8 @@ def logger(name=__name__, level=logging.DEBUG) -> logging.getLogger:
     log.setLevel(level)
     fmt = logging.Formatter("%(asctime)s [%(filename)s] func: [%(funcName)s] [%(levelname)s] "
                             "line: [%(lineno)d] %(message)s")
-    file_hdlr = logging.FileHandler(f'{name}.log', delay=True)  # delay=True delays opening file until actually needed
+    # delay=True delays opening file until actually needed, preventing I/O errors
+    file_hdlr = logging.FileHandler(f'{name}.log', delay=True)
     file_hdlr.setLevel(logging.DEBUG)
     file_hdlr.setFormatter(fmt)
     if not log.handlers:
