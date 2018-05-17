@@ -1,5 +1,7 @@
-
-from datetime import datetime
+"""
+Contains utility functions for testing purposes
+"""
+import logging
 from os import listdir, path
 import pathlib
 from pickle import dump, load
@@ -7,20 +9,23 @@ from pickle import dump, load
 import feedparser as fp
 
 
-def logger(exc_type, exc_val, exc_tb):
+def logger(name=__name__, level=logging.DEBUG) -> logging.getLogger:
     """
-    Appends extremely basic error info to error log file.
-    :param exc_type: exception type
-    :param exc_val:  exception value
-    :param exc_tb: exception traceback
-    :return: None
+    Creates logger
+    :param name: name of logger
+    :param level: logging level to use with this logger
+    :return: logging.getLogger
     """
-    with open('errors.log', 'a') as file:
-        file.write('\n'.join([datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                   str(exc_type.__name__),
-                   str(exc_val),
-                   f'Line {exc_tb.tb_lineno}'
-                   '\n\n']))
+    log = logging.getLogger(name)
+    log.setLevel(level)
+    fmt = logging.Formatter("%(asctime)s [%(filename)s] func: [%(funcName)s] [%(levelname)s] "
+                            "line: [%(lineno)d] %(message)s")
+    file_hdlr = logging.FileHandler(f'{name}.log', delay=True)  # delay=True delays opening file until actually needed
+    file_hdlr.setLevel(logging.DEBUG)
+    file_hdlr.setFormatter(fmt)
+    if not log.handlers:
+        log.addHandler(file_hdlr)
+    return log
 
 
 def create_test_objects():
@@ -37,8 +42,8 @@ def create_test_objects():
             url, name = line.split()
             name = f'{name}.p'
             if name not in files:
-                with open(path.join('testfiles', name), 'wb') as f:
-                    dump(fp.parse(url), f)
+                with open(path.join('testfiles', name), 'wb') as file_:
+                    dump(fp.parse(url), file_)
 
 
 def load_test_objects():

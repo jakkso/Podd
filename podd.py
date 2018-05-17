@@ -5,10 +5,10 @@ Sets up CLI and integrates various classes into downloader function
 from argparse import ArgumentParser as Ag
 from datetime import datetime
 
-from database import Database, Logger
-from feed import Feed, Podcast
-from message import Message
 from config import Config
+from database import Database, Feed
+from message import Message
+from podcast import Podcast
 
 
 def main() -> None:
@@ -37,18 +37,23 @@ def main() -> None:
     if args.option:
         Feed().print_options()
     elif args.catalog:
-        Feed().set_catalog_option(args.catalog.lower())
+        with Feed() as feed:
+            feed.set_catalog_option(args.catalog.lower())
     elif args.base:
-        Feed().set_directory_option(args.base)
+        with Feed() as feed:
+            feed.set_directory_option(args.base)
     elif args.add:
-        Feed().add(args.add)
+        with Feed() as feed:
+            feed.add(args.add)
     elif args.ADD:
         with open(args.ADD) as file:
-            Feed().add([line.strip() for line in file if line.strip() != ''])
+            with Feed() as feed:
+                feed.add(*[line.strip() for line in file if line.strip() != ''])
     elif args.list:
         Feed().print_subscriptions()
     elif args.remove:
-        Feed().remove()
+        with Feed() as feed:
+            feed.remove()
     elif args.download:
         downloader()
     else:
@@ -60,15 +65,14 @@ def downloader() -> None:
     Refreshes subs, downloads episodes and sends email
     """
     downloads = []
-    logger = Logger('podcasts')
     with Database() as _db:
         subs = _db.subscriptions()
     for sub in subs:
         url, directory, date = sub
         date = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
-        with Podcast(date, directory, url, logger) as podcast:
+        with Podcast(date, directory, url) as podcast:
             jinja_packet = podcast.downloader()
-            if jinja_packet is not None:
+            if jinja_packet:
                 downloads.append(jinja_packet)
     if downloads:
         Message(downloads).send()

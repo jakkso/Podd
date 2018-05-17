@@ -3,3 +3,4 @@ launcher.sh
 errors.log
 testfiles/
 config.py
+*.log

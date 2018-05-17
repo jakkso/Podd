@@ -1,15 +1,17 @@
 """
 Contains database and logging classes
 """
-import datetime
-import logging
-from os import listdir, path
+from datetime import datetime, timedelta
+from os import access, listdir, path, R_OK, W_OK
 import pathlib
 import sqlite3
-import traceback
+from time import mktime
 from types import TracebackType
 
+import feedparser as fp
+
 from config import Config
+from utilities import logger
 
 
 class Database:
@@ -17,11 +19,11 @@ class Database:
     Defines SQLite database creation and usage methods
     """
 
-    def __init__(self):
-        self._db_file = Config.database
+    def __init__(self, db_file: str=Config.database):
+        self._db_file = db_file
         self._conn = sqlite3.connect(self._db_file)
         self.cursor = self._conn.cursor()
-        self._logger = Logger('database')
+        self._logger = logger()
 
     def __enter__(self):
         return self
@@ -39,12 +41,11 @@ class Database:
         """
         if exc_type is not None:
             self._conn.rollback()
-            self._conn.close()
             self._logger.error(exc_type, exc_val, exc_tb)
 
         else:
             self._conn.commit()
-            self._conn.close()
+        self._conn.close()
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self._db_file})'
@@ -60,7 +61,7 @@ class Database:
         files = [path.join(path.dirname(database), item) for item in
                  listdir(path.dirname(database))]
         if database not in files:
-            with Database() as _db:
+            with Database(database) as _db:
                 cur = _db.cursor
                 cur.execute('CREATE TABLE IF NOT EXISTS podcasts \
                              (name text, url text, directory text, date text)')
@@ -85,7 +86,7 @@ class Database:
         self.cursor.execute('SELECT url, directory, date FROM podcasts')
         return self.cursor.fetchall()
 
-    def change_download_date(self, date: datetime.datetime, podcast_name: str) -> None:
+    def change_download_date(self, date: datetime, podcast_name: str) -> None:
         """
         Changes download date for podcast name
         :param date: datetime object, coerced to a string
@@ -136,64 +137,162 @@ class Database:
                                   download_directory,
                                   date),))
 
-    def remove_podcast(self, url: str) -> None:
+    def remove_podcast(self, name: str) -> None:
         """
-        Deletes row where url matches
-        :param url: rss feed url
+        Deletes row where name matches
+        :param name: rss feed url
         :return: None
         """
-        self.cursor.execute('DELETE FROM podcasts WHERE name is ?', (url,))
+        self.cursor.execute('DELETE FROM podcasts WHERE name = ?', (name,))
 
 
-class Logger:
+class Feed(Database):
     """
-    Used to log events
+    Contains methods for managing rss feed subscriptions
     """
 
-    def __init__(self, log_name: str) -> logging.getLogger:
-        """
-        :param log_name: name of log
-        """
-        self._log_name = log_name
-        self._logger = logging.getLogger(self._log_name)
-        self._logger.setLevel(logging.DEBUG)
-        fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        file_hdlr = logging.FileHandler(f'{self._log_name}.log')
-        file_hdlr.setLevel(logging.DEBUG)
-        file_hdlr.setFormatter(fmt)
-        self._logger.addHandler(file_hdlr)
+    def __init__(self, db_file: str=Config.database):
+        self._db_file = db_file
+        super(Feed, self).__init__(self._db_file)
+        self._logger = logger('feed')
 
-    def error(self,
-              err_type,
-              err_value,
-              traceback_: TracebackType,
-              level=logging.ERROR) -> None:
+    def add(self, *urls) -> None:
         """
-        Thanks to SO for help on this:
-        https://stackoverflow.com/questions/5191830/how-do-i-log-a-python-error-with-debug \
-        -information?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
-        :param err_type:
-        :param err_value:
-        :param traceback_:
-        :param level: logging level
+        Parses and validates rss feed urls, adds to
+        database and create download directory for each new feed
+        :param urls: rss feed urls to add to subscription database
         :return: None
         """
-        traceback_ = traceback.format_exception(err_type, err_value, traceback_)
-        traceback_lines = []
-        for line in [line.rstrip('\n') for line in traceback_]:
-            traceback_lines.extend(line.splitlines())
-        self._logger.log(level, traceback_lines.__str__())
+        podcasts = self.fetch_single_column('url')
+        option, base_directory = self.options()
+        for url in urls:
+            if url not in podcasts:
+                try:
+                    page = fp.parse(url)
+                    episodes = page.entries
+                    if not episodes:
+                        msg = f'No episodes found for {url}'
+                        print(msg)
+                        self._logger.warning(msg)
+                        return
+                    if option == 1:
+                        date = str(self.last_episode_only(episodes))
+                    else:
+                        date = str(datetime.fromtimestamp(0))
+                    if page:
+                        podcast_name = page.feed.title
+                        download_dir = path.join(base_directory, podcast_name)
+                        self.add_podcast(podcast_name, url, download_dir, date)
+                        pathlib.Path(base_directory).joinpath(podcast_name).\
+                            mkdir(parents=True, exist_ok=True)
+                        msg = f'{page.feed.title} added!'
+                        print(msg)
+                        self._logger.info(msg)
+                except KeyError:
+                    msg = 'Error, podcast not added!'
+                    print(msg)
+                    self._logger.warning(msg)
+            else:
+                msg = f'{url} already in database!'
+                print(msg)
+                self._logger.warning(msg)
 
-    def info(self, msg: str) -> None:
+    def remove(self) -> None:
         """
-        :param msg: str
+        Used to remove a podcast from database.
         :return: None
         """
+        podcasts = {i[0]: i[1] for i in enumerate(self.fetch_single_column('name'))}
+        if not podcasts:
+            print('You have no subscriptions!')
+            return
+        for num, podcast in podcasts.items():
+            print(f'{num}: {podcast}')
+        try:
+            choice = int(input('Podcast number to remove: '))
+            if choice not in podcasts:
+                print('Invalid option')
+                return
+            self.remove_podcast(podcasts[choice])
+            msg = f'Removed {podcasts[choice]}'
+            print(msg)
+            self._logger.info(msg)
+        except ValueError:
+            print('Invalid Option, enter a number')
+
+    @staticmethod
+    def last_episode_only(episodes) -> datetime:
+        """
+        TODO this probably isn't a great way to do this.  It causes problems like podcasts
+        that download repeatedly each time the program is run
+        When adding a podcast to database, a date is needed, this method
+        is used when option is set to only download new episodes.
+        :param episodes: feedparse.parse(url).entries
+        :return: datetime object 1 min older than latest released episode
+        """
+        first, second = datetime.fromtimestamp(mktime(episodes[0].published_parsed)), \
+            datetime.fromtimestamp(mktime(episodes[1].published_parsed))
+        if first < second:
+            episodes = episodes[::-1]
+        latest_episode = datetime.fromtimestamp(mktime(episodes[0].published_parsed))
+        return latest_episode - timedelta(minutes=1)
+
+    def print_subscriptions(self) -> None or list:
+        """
+        Prints out current subscriptions, intended to be used with CLI.
+        :return: None
+        """
+        podcasts = self.fetch_single_column('name')
+        if podcasts:
+            print(' -- Current Subscriptions -- ')
+            for podcast in podcasts:
+                print(podcast)
+            return podcasts
+        else:
+            print('You have no subscriptions!')
+
+    def print_options(self) -> tuple:
+        """
+        Prints currently selected options
+        :return: None
+        """
+        valid_options = {0: 'New podcasts download all episodes\n',
+                         1: 'New podcasts download only new episodes\n'}
+        new_only, download_directory = self.options()
+        print('-- Options --')
+        print(f'{valid_options[new_only]}Download Directory: {download_directory}')
+        print('-------------')
+        return new_only, download_directory
+
+    def set_directory_option(self, directory) -> None or bool:
+        """
+        :param directory: string, abs path to base download directory
+        :return: None
+        """
+        if access(directory, W_OK) and access(directory, R_OK):
+                self.change_option('base_directory', directory)
+                msg = f'Changed download directory to {directory}'
+                print(msg)
+                self._logger.info(msg)
+                return True
+        else:
+            msg = f'Invalid directory: {directory}'
+            print(msg)
+            self._logger.warning(msg)
+
+    def set_catalog_option(self, option) -> None or bool:
+        """
+        :param option: string, catalog option desired
+        :return: None
+        """
+        valid_options = {'all': '0', 'new': '1'}
+        if option not in valid_options:
+            msg = f'Invalid option: {option}'
+            print(msg)
+            self._logger.warning(msg)
+            return
+        self.change_option('new_only', valid_options[option])
+        msg = f'Set catalog option to {option}'
+        print(msg)
         self._logger.info(msg)
-
-    def warning(self, msg: str) -> None:
-        """
-        :param msg: str
-        :return: None
-        """
-        self._logger.warning(msg)
+        return True
