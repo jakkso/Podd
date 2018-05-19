@@ -8,6 +8,7 @@ import smtplib
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from config import Config
+from utilities import logger
 
 
 class Message:
@@ -15,7 +16,7 @@ class Message:
     Email renderer and sender-er
     """
 
-    __slots__ = ['podcasts', 'text', 'html']
+    __slots__ = ['logger', 'podcasts', 'text', 'html']
 
     def __init__(self, podcasts: list):
         """
@@ -26,6 +27,7 @@ class Message:
         JinjaPacket = namedtuple('JinjaPacket', 'name link summary image episodes')
         Episode(title, summary, image, link, filename, date)
         """
+        self.logger = logger('message')
         self.podcasts = podcasts
         self.text = self.render_text()
         self.html = self.render_html()
@@ -74,3 +76,4 @@ class Message:
         server.login(user=Config.sender, password=Config.pw)
         server.sendmail(Config.sender, Config.recipient, msg.as_string())
         server.quit()
+        self.logger.info(f'Message sent to {Config.recipient}')

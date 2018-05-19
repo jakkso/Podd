@@ -3,12 +3,15 @@ Sets up CLI and integrates various classes into downloader function
 """
 
 from argparse import ArgumentParser as Ag
+import asyncio
 from datetime import datetime
+
+import aiohttp
 
 from config import Config
 from database import Database, Feed
 from message import Message
-from podcast import Podcast
+from podcast import Podcast, episode_downloader
 
 
 def main() -> None:
@@ -64,18 +67,31 @@ def downloader() -> None:
     """
     Refreshes subs, downloads episodes and sends email
     """
-    downloads = []
+    async def async_download() -> None:
+        """
+
+        :return: None
+        """
+        async with aiohttp.ClientSession(loop=loop) as session:
+            for episode in download_list:
+                await episode_downloader(session, episode)
+
+    jinja_packets = []
+    download_list = []
     with Database() as _db:
         subs = _db.subscriptions()
     for sub in subs:
         url, directory, date = sub
         date = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
         with Podcast(date, directory, url) as podcast:
-            jinja_packet = podcast.downloader()
+            jinja_packet = podcast.episodes()
             if jinja_packet:
-                downloads.append(jinja_packet)
-    if downloads:
-        Message(downloads).send()
+                jinja_packets.append(jinja_packet)
+                download_list.extend(jinja_packet.episodes)
+    if jinja_packets and download_list:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(async_download())
+        Message(jinja_packets).send()
 
 
 if __name__ == '__main__':

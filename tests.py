@@ -133,7 +133,7 @@ class TestFeed(unittest.TestCase):
     def test_print_subscriptions(self, mock_method):
         mock_method.return_value = RYAN
         no_podcasts = Feed(DATABASE).print_subscriptions()
-        self.assertIsNone(no_podcasts)
+        self.assertFalse(no_podcasts)
         with Feed(DATABASE) as feed:
             feed.add(RYAN_URL)
         podcasts = Feed(DATABASE).print_subscriptions()
@@ -150,12 +150,12 @@ class TestFeed(unittest.TestCase):
 
     def test_set_directory_options(self):
         with Feed(DATABASE) as feed:
-            self.assertIsNone(feed.set_directory_option('hello'))
+            self.assertFalse(feed.set_directory_option('hello'))
             self.assertTrue(feed.set_directory_option(DIR_PATH))
 
     def test_set_catalog_option(self):
         with Feed(DATABASE) as feed:
-            self.assertIsNone(feed.set_catalog_option('hello'))
+            self.assertFalse(feed.set_catalog_option('hello'))
             self.assertTrue(feed.set_catalog_option('all'))
 
 

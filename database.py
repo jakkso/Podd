@@ -19,7 +19,7 @@ class Database:
     Defines SQLite database creation and usage methods
     """
 
-    def __init__(self, db_file: str=Config.database):
+    def __init__(self, db_file: str = Config.database):
         self._db_file = db_file
         self._conn = sqlite3.connect(self._db_file)
         self.cursor = self._conn.cursor()
@@ -151,7 +151,7 @@ class Feed(Database):
     Contains methods for managing rss feed subscriptions
     """
 
-    def __init__(self, db_file: str=Config.database):
+    def __init__(self, db_file: str = Config.database):
         self._db_file = db_file
         super(Feed, self).__init__(self._db_file)
         self._logger = logger('feed')
@@ -237,7 +237,7 @@ class Feed(Database):
         latest_episode = datetime.fromtimestamp(mktime(episodes[0].published_parsed))
         return latest_episode - timedelta(minutes=1)
 
-    def print_subscriptions(self) -> None or list:
+    def print_subscriptions(self) -> False or list:
         """
         Prints out current subscriptions, intended to be used with CLI.
         :return: None
@@ -250,6 +250,7 @@ class Feed(Database):
             return podcasts
         else:
             print('You have no subscriptions!')
+        return False
 
     def print_options(self) -> tuple:
         """
@@ -264,23 +265,23 @@ class Feed(Database):
         print('-------------')
         return new_only, download_directory
 
-    def set_directory_option(self, directory) -> None or bool:
+    def set_directory_option(self, directory) -> bool:
         """
         :param directory: string, abs path to base download directory
         :return: None
         """
         if access(directory, W_OK) and access(directory, R_OK):
-                self.change_option('base_directory', directory)
-                msg = f'Changed download directory to {directory}'
-                print(msg)
-                self._logger.info(msg)
-                return True
-        else:
-            msg = f'Invalid directory: {directory}'
+            self.change_option('base_directory', directory)
+            msg = f'Changed download directory to {directory}'
             print(msg)
-            self._logger.warning(msg)
+            self._logger.info(msg)
+            return True
+        msg = f'Invalid directory: {directory}'
+        print(msg)
+        self._logger.warning(msg)
+        return False
 
-    def set_catalog_option(self, option) -> None or bool:
+    def set_catalog_option(self, option) -> bool:
         """
         :param option: string, catalog option desired
         :return: None
@@ -290,7 +291,7 @@ class Feed(Database):
             msg = f'Invalid option: {option}'
             print(msg)
             self._logger.warning(msg)
-            return
+            return False
         self.change_option('new_only', valid_options[option])
         msg = f'Set catalog option to {option}'
         print(msg)

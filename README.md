@@ -6,7 +6,7 @@ mutagen for rudimentary tagging functionality.  It is by no means polished, it's
 #####License
 GPL v2.0, see LICENSE.txt
 
-## Usage
+## Usagde
 
 
 `python3 podd.py -a [feedurl]` to add a single feed, or `python3 podd.py -A [file]` to add a line-separated file of feeds.
