@@ -2,8 +2,8 @@
 Contains utility functions for testing purposes
 """
 import logging
-from os import listdir, path
 import pathlib
+from os import listdir, path
 from pickle import dump, load
 
 import feedparser as fp
