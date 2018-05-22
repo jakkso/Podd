@@ -4,3 +4,4 @@ errors.log
 testfiles/
 config.py
 *.log
+feeds.txt

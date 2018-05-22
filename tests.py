@@ -5,7 +5,7 @@ import sqlite3
 import unittest
 from unittest.mock import patch
 
-from database import DataB, Feeds, create_database
+from database import Database, Feed, create_database
 from utilities import load_test_objects
 
 DATABASE = path.join(path.dirname(path.abspath(__file__)), 'tests.db')
@@ -58,24 +58,23 @@ class TestDatabase(Setup):
 
     def test_add_podcast(self):
 
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             db.add_podcast(name=NAME, url=URL, directory=DIRECTORY)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM main.podcasts WHERE id = 1')
         res = cursor.fetchone()
         self.assertEqual(res, (1, NAME, URL, DIRECTORY))
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             with self.assertRaises(sqlite3.IntegrityError):  # Checking that unique constraint is raised
                 db.add_podcast(name=NAME, url=URL, directory=DIRECTORY)
 
     def test_add_episodes(self):
         feed_id = '1234567'
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             db.add_podcast(name=NAME, url=URL, directory=DIRECTORY)
             db.add_episode(podcast_url=URL,
                            feed_id=feed_id)
-
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM main.episodes WHERE id = 1')
@@ -84,12 +83,12 @@ class TestDatabase(Setup):
 
     def test_remove_podcast(self):
         url2 = 'google.com'
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             db.add_podcast(name=NAME, url=URL, directory=DIRECTORY)
             db.add_podcast(name=NAME, url=url2, directory=DIRECTORY)
             db.add_episode(podcast_url=URL, feed_id='123456')
             db.add_episode(podcast_url=URL, feed_id='512312456')
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             db.remove_podcast(url=URL)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -99,11 +98,11 @@ class TestDatabase(Setup):
         self.assertEqual(1, len([i[0] for i in cursor.fetchall()]))
 
     def test_get_options(self):
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             self.assertEqual((1, HOME), db.get_options())
 
     def test_set_options(self):
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             db.change_option('new_only', '0')
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -112,7 +111,7 @@ class TestDatabase(Setup):
 
     def test_get_podcasts(self):
         url2 = 'google.com'
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             db.add_podcast(name=NAME, url=URL, directory=DIRECTORY)
             db.add_podcast(name=NAME, url=url2, directory=DIRECTORY)
             podcasts = db.get_podcasts()
@@ -122,16 +121,21 @@ class TestDatabase(Setup):
 
     def test_get_episodes(self):
         url2 = 'google.com'
-        with DataB(DATABASE) as db:
+        with Database(DATABASE) as db:
             db.add_podcast(name=NAME, url=URL, directory=DIRECTORY)
             db.add_podcast(name=NAME, url=url2, directory=DIRECTORY)
             db.add_episode(podcast_url=URL, feed_id='123456')
             db.add_episode(podcast_url=URL, feed_id='512312456')
+            db.add_episode(podcast_url=URL, feed_id='4')
+            db.add_episode(podcast_url=URL, feed_id='5')
             db.add_episode(podcast_url=url2, feed_id='1')
             db.add_episode(podcast_url=url2, feed_id='2')
-        with DataB(DATABASE) as db:
-            self.assertEqual(db.get_episodes(URL), ['123456', '512312456'])
-            self.assertEqual(db.get_episodes(url2), ['1', '2'])
+        with Database(DATABASE) as db:
+            db.add_episode(podcast_url=URL, feed_id='6')
+            db.add_episode(podcast_url=url2, feed_id='3')
+        with Database(DATABASE) as db:
+            self.assertEqual(db.get_episodes(URL), ['123456', '512312456', '4', '5', '6'])
+            self.assertEqual(db.get_episodes(url2), ['1', '2', '3'])
 
 
 class TestFeed(Setup):
@@ -144,7 +148,7 @@ class TestFeed(Setup):
         Add some URLs that don't contain a valid rss feed
         :return: None
         """
-        with Feeds(DATABASE) as feed:
+        with Feed(DATABASE) as feed:
             feed.add('google.com')
             feed.add('yahoo.com')
         conn = sqlite3.connect(DATABASE)
@@ -155,7 +159,7 @@ class TestFeed(Setup):
 
     @patch('feedparser.parse')
     def test_add_good_podcast(self, mock_method):
-        with Feeds(DATABASE) as feed:
+        with Feed(DATABASE) as feed:
             feed.change_option('new_only', 0)
             mock_method.return_value = GOLD
             feed.add(GOLD_URL)
@@ -165,7 +169,7 @@ class TestFeed(Setup):
         res = [i[0] for i in cursor.fetchall()]
         conn.close()
         self.assertEqual(len(res), 0)
-        with Feeds(DATABASE) as feed:
+        with Feed(DATABASE) as feed:
             feed.change_option('new_only', 1)
             mock_method.return_value = RYAN
             feed.add(RYAN_URL)
@@ -183,30 +187,30 @@ class TestFeed(Setup):
         :return:
         """
         url2 = 'google.com'
-        with Feeds(DATABASE) as db:
+        with Feed(DATABASE) as db:
             db.add_podcast(name=NAME, url=URL, directory=DIRECTORY)
             db.add_podcast(name=NAME, url=url2, directory=DIRECTORY)
             db.remove()
 
     def test_print_options(self):
-        with Feeds(DATABASE) as feed:
+        with Feed(DATABASE) as feed:
             new_only, dl_dir = feed.print_options()
         self.assertEqual(new_only, 1)
         self.assertEqual(dl_dir, HOME)
 
     def test_set_dir_option(self):
-        with Feeds(DATABASE) as feed:
+        with Feed(DATABASE) as feed:
             self.assertTrue(feed.set_directory_option(str(pathlib.Path.home())))
             self.assertFalse(feed.set_directory_option('asdfa'))
 
     def test_set_catalog_option(self):
-        with Feeds(DATABASE) as feed:
+        with Feed(DATABASE) as feed:
             res = feed.set_catalog_option('new')
         self.assertTrue(res)
-        with Feeds(DATABASE) as feed:
+        with Feed(DATABASE) as feed:
             res = feed.set_catalog_option('asdfdd')
         self.assertFalse(res)
-        with Feeds(DATABASE) as feed:
+        with Feed(DATABASE) as feed:
             res = feed.set_catalog_option('all')
         self.assertTrue(res)
         conn = sqlite3.connect(DATABASE)
@@ -214,14 +218,6 @@ class TestFeed(Setup):
         cursor.execute('SELECT new_only FROM main.settings')
         res = cursor.fetchone()[0]
         self.assertEqual(res, 0)
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':

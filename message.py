@@ -27,7 +27,7 @@ class Message:
         JinjaPacket = namedtuple('JinjaPacket', 'name link summary image episodes')
         Episode(title, summary, image, link, filename, date)
         """
-        self.logger = logger('message')
+        self.logger = logger('Logs/message')
         self.podcasts = podcasts
         self.text = self.render_text()
         self.html = self.render_html()
