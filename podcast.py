@@ -71,12 +71,6 @@ class Podcast:
                                     episode_list)
         return False
 
-    def add_new_episodes(self) -> None:
-        """
-        Adds all new episodes to database
-        :return: None
-        """
-
 
 class Episode:
     """
@@ -149,6 +143,8 @@ class Episode:
                 self._logger.warning(f'Unable to determine filetype for {self.filename}')
         except AttributeError:
             self._logger.warning(f'Unable to tag {self.filename}')
+        except mutagen.MutagenError:
+            self._logger.warning(f'Unable to tag {self.filename}')
 
     def _image_url(self):
         """
@@ -184,12 +180,10 @@ class Episode:
         """
         :return: str, ex: path/to/podcast/directory/episode.m4a
         Defaults to .mp3 as that's the most common filetype
-        TODO This is hot garbage, there's got to be a better way that this insane,
-        TODO presumptuous hack
         """
         for ext in self.types:
             if ext in self.url:
-                return path.join(self._dl_dir, ''.join([self.title, ext]))
+                return path.join(self._dl_dir, ''.join([self.title.replace('/', '-'), ext]))
         return path.join(self._dl_dir, ''.join([self.title, '.mp3']))
 
     def _mp3_tagger(self) -> None:

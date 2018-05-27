@@ -139,9 +139,6 @@ class TestDatabase(Setup):
 
 
 class TestFeed(Setup):
-    # This is going to have to be patched out to stop network calls, same as before.
-    def test_add_feed(self):
-        pass
 
     def test_add_bad_podcast(self):
         """
@@ -159,9 +156,9 @@ class TestFeed(Setup):
 
     @patch('feedparser.parse')
     def test_add_good_podcast(self, mock_method):
+        mock_method.return_value = GOLD
         with Feed(DATABASE) as feed:
             feed.change_option('new_only', 0)
-            mock_method.return_value = GOLD
             feed.add(GOLD_URL)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -169,28 +166,39 @@ class TestFeed(Setup):
         res = [i[0] for i in cursor.fetchall()]
         conn.close()
         self.assertEqual(len(res), 0)
+
+    @patch('feedparser.parse')
+    def test_add_podcast_with_single_episode(self, mock_method):
+        mock_method.return_value = RYAN
         with Feed(DATABASE) as feed:
             feed.change_option('new_only', 1)
-            mock_method.return_value = RYAN
             feed.add(RYAN_URL)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM episodes')
-        res = [i for i in cursor.fetchall()]
+        res = cursor.fetchall()
         conn.close()
-        self.assertGreaterEqual(len(res), 1)
+        self.assertEqual(326, len(res))
 
-    def a_test_remove_podcasts(self):
+    @patch('builtins.input')
+    def test_remove_podcasts(self, mock_method):
         """
-        This function tests the removal functionality, but given that it requires user
-        interaction via CLI, it isn't normally run
+        This test patches out input to simulate user typing in 1 and pressing return
+        , which is how one would remove a podcast from the database
+        :param mock_method:
         :return:
         """
+        mock_method.return_value = '1'
         url2 = 'google.com'
         with Feed(DATABASE) as db:
             db.add_podcast(name=NAME, url=URL, directory=DIRECTORY)
             db.add_podcast(name=NAME, url=url2, directory=DIRECTORY)
             db.remove()
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM podcasts')
+        res = [i[0] for i in cursor.fetchall()]
+        self.assertEqual(1, len(res))
 
     def test_print_options(self):
         with Feed(DATABASE) as feed:

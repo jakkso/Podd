@@ -143,20 +143,21 @@ class Feed(Database):
         try:
             for url in urls:
                 catalog_option, dl_dir = self.get_options()
+                # print(catalog_option == 1)
                 feed = fp.parse(url)
                 episodes = feed.entries
                 if not episodes:
                     msg = f'No episodes at {url}'
                     print(msg)
                     self._logger.info(msg)
-                    return
+                    raise KeyError
                 podcast_name = feed.feed.title
                 podcast_dir = path.join(dl_dir, podcast_name)
-                self.add_podcast(name=podcast_name, url=url, directory=podcast_dir)
+                # url=feed.href covers cases when rss feeds redirect to a diff URL.
+                self.add_podcast(name=podcast_name, url=feed.href, directory=podcast_dir)
                 if catalog_option:  # If true, add all episodes except newest to database
                     self.new_podcast_only(feed=feed)
-                pathlib.Path(dl_dir).joinpath(podcast_name). \
-                    mkdir(parents=True, exist_ok=True)
+                pathlib.Path(podcast_dir).mkdir(parents=True, exist_ok=True)
                 msg = f'{podcast_name} added!'
                 print(msg)
                 self._logger.info(msg)
@@ -177,7 +178,6 @@ class Feed(Database):
         if not podcasts:
             print('You have no subscriptions!')
             return
-        print(podcasts)
         for num, podcast in podcasts.items():
             print(f'{num}: {podcast[0]}')
         try:
@@ -196,7 +196,7 @@ class Feed(Database):
         """
         Loops through episodes, adding all episodes to the database, except for the newest one
         :param feed: FeedParserDict of a single feed
-        :return:
+        :return: None
         """
         episodes = feed.entries
         first = episodes[0].published_parsed
@@ -206,7 +206,7 @@ class Feed(Database):
         else:
             episodes = episodes[1:]
         for epi in episodes:
-            self.add_episode(feed_id=epi.id, podcast_url=feed.href)
+            self.add_episode(podcast_url=feed.href, feed_id=epi.id)
 
     def print_options(self) -> tuple:
         """
@@ -218,6 +218,7 @@ class Feed(Database):
         new_only, download_directory = self.get_options()
         print('-- Options --')
         print(f'{valid_options[new_only]}Download Directory: {download_directory}')
+        print(f'Database file: {self._db_file}')
         print('-------------')
         return new_only, download_directory
 
@@ -264,7 +265,7 @@ class Feed(Database):
         return True
 
 
-class Worker:
+class EpisodeUpdater:
     """
     Gets items from Queue, adds those episodes to the database
     """
@@ -276,13 +277,15 @@ class Worker:
         self.queue = queue
         self.database = Database
         self.thread = Thread(target=self._run)
-        self.thread.daemon = True
+        # self.thread.daemon = True
         self.thread.start()
 
     def _run(self):
         while True:
             if not self.queue.empty():
                 episode = self.queue.get()
+                if episode == 'stop':
+                    break
                 with self.database() as _db:
                     _db.add_episode(podcast_url=episode.podcast_url,
                                     feed_id=episode.entry.id)
