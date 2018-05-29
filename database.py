@@ -24,7 +24,7 @@ class Database:
         self._conn = sqlite3.connect(self._db_file)
         self._conn.execute('PRAGMA foreign_keys=ON')
         self.cursor = self._conn.cursor()
-        self._logger = logger('Logs/database')
+        self._logger = logger('database')
 
     def __enter__(self):
         return self

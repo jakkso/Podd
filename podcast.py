@@ -42,7 +42,7 @@ class Podcast:
         """
         self._url = url
         self._dl_dir = directory
-        self._logger = logger('Logs/podcast')
+        self._logger = logger('podcast')
         _old_eps = Database().get_episodes(self._url)
         feed = fp.parse(self._url)
         self._name = feed.feed.title
@@ -103,7 +103,7 @@ class Episode:
         self._dl_dir = directory
         self.entry = entry
         self._podcast_name = podcast_name
-        self._logger = logger('Logs/episode')
+        self._logger = logger('episode')
         self.podcast_url = podcast_url
         self.title = self.entry.title
         self.summary = self.entry.summary
