@@ -9,7 +9,7 @@ from pickle import dump, load
 import feedparser as fp
 
 
-def logger(name=__name__, level=logging.DEBUG) -> logging.getLogger:
+def logger(name, level=logging.DEBUG) -> logging.getLogger:
     """
     Creates logger
     :param name: name of logger
