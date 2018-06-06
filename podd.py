@@ -6,7 +6,7 @@ from argparse import ArgumentParser as Ag
 from multiprocessing.dummy import Pool as ThreadPool
 from queue import Queue
 
-from database import Database, Feed, EpisodeUpdater, create_database
+from database import Database, Feed, DatabaseUpdater, create_database
 from message import Message
 from podcast import Podcast, Episode
 
@@ -81,12 +81,12 @@ def downloader() -> None:
                 jinja_packets.append(j_packet)
                 to_dl.extend(j_packet.episodes)
     if jinja_packets:
-        EpisodeUpdater(QUEUE)
+        DatabaseUpdater(QUEUE)
         pool = ThreadPool(3)
         pool.map(threaded_download, to_dl)
         pool.close()
         pool.join()
-        QUEUE.put('stop')  # 'Poison pill' to kill EpisodeUpdater worker
+        QUEUE.put('stop')  # 'Poison pill' to kill DatabaseUpdater worker
         Message(jinja_packets).send()
     else:
         print('No new episodes')
@@ -95,12 +95,12 @@ def downloader() -> None:
 def threaded_download(episode: Episode) -> None:
     """
     :param: episode Episode obj
-    :return:
+    :return: None
     """
     print(f'Downloading {episode.title}')
-    QUEUE.put(episode)
     episode.download()
     episode.tag()
+    QUEUE.put(episode)
 
 
 if __name__ == '__main__':

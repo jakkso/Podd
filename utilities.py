@@ -23,7 +23,7 @@ def logger(name, level=logging.DEBUG) -> logging.getLogger:
     # delay=True delays opening file until actually needed, preventing I/O errors
     file_hdlr = logging.FileHandler(f"{path.join(path.dirname(__file__), 'Logs/')}{name}.log",
                                     delay=True)
-    file_hdlr.setLevel(logging.DEBUG)
+    file_hdlr.setLevel(level)
     file_hdlr.setFormatter(fmt)
     if not log.handlers:
         log.addHandler(file_hdlr)

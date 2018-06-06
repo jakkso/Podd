@@ -6,7 +6,8 @@ import unittest
 from unittest.mock import patch
 
 from database import Database, Feed, create_database
-from utilities import load_test_objects
+from podcast import Episode, Podcast
+from utilities import load_test_objects, logger
 
 DATABASE = path.join(path.dirname(path.abspath(__file__)), 'tests.db')
 DATE = datetime(2017, 2, 8, 17, 0)
@@ -16,6 +17,7 @@ NAME = 'example podcast'
 RYAN_URL = 'http://tangent.libsyn.com/rss'
 GOLD_URL = 'http://www.goldmansachs.com/exchanges-podcast/feed.rss'
 RYAN, GOLD, PETERSON = load_test_objects()
+TEST_LOG = path.join(path.join(path.dirname(path.abspath(__file__)), 'Logs'), 'test_logger')
 URL = 'examplepodcast.com/feed.rss'
 
 
@@ -134,8 +136,8 @@ class TestDatabase(Setup):
             db.add_episode(podcast_url=URL, feed_id='6')
             db.add_episode(podcast_url=url2, feed_id='3')
         with Database(DATABASE) as db:
-            self.assertEqual(db.get_episodes(URL), ['123456', '512312456', '4', '5', '6'])
-            self.assertEqual(db.get_episodes(url2), ['1', '2', '3'])
+            self.assertEqual(db.get_episodes(URL), {'123456', '512312456', '4', '5', '6'})
+            self.assertEqual(db.get_episodes(url2), {'1', '2', '3'})
 
 
 class TestFeed(Setup):
@@ -226,6 +228,33 @@ class TestFeed(Setup):
         cursor.execute('SELECT new_only FROM main.settings')
         res = cursor.fetchone()[0]
         self.assertEqual(res, 0)
+
+
+class TestLogger(unittest.TestCase):
+
+    def tearDown(self):
+
+        remove(TEST_LOG + '.log')
+
+    def test_logger(self):
+        files = listdir(path.dirname(TEST_LOG))
+        test_logger = logger('test_logger')
+        # Checks that file isn't created until a log entry is created.
+        self.assertNotIn('test_logger.log', files)
+        test_logger.info('test message!')
+        files = listdir(path.dirname(TEST_LOG))
+        self.assertIn('test_logger.log', files)
+        with open(TEST_LOG + '.log', 'r') as file:
+            line = file.read()
+        self.assertIn('test message!', line)
+
+
+class TestPodcast(unittest.TestCase):
+    pass
+
+
+class TestEpisode(unittest.TestCase):
+    pass
 
 
 if __name__ == '__main__':

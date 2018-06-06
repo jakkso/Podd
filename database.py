@@ -16,7 +16,7 @@ from utilities import logger
 
 class Database:
     """
-    Handles database operations
+    Defines database operations
     """
 
     def __init__(self, db_file: str = Config.database):
@@ -95,15 +95,15 @@ class Database:
                             (feed_id, podcast_url))
         self._conn.commit()
 
-    def get_episodes(self, url: str) -> list:
+    def get_episodes(self, url: str) -> set:
         """
         :param url: rss feed url
-        :return: list of episode ids associated with url
+        :return: dict of episode ids associated with url
         """
         self.cursor.execute('SELECT feed_id FROM episodes '
                             'JOIN podcasts p ON episodes.podcast_id = p.id AND p.url = ?',
                             (url,))
-        return [item[0] for item in self.cursor.fetchall()]
+        return {item[0] for item in self.cursor.fetchall()}
 
     def get_options(self) -> tuple:
         """
@@ -142,8 +142,7 @@ class Feed(Database):
         """
         try:
             for url in urls:
-                catalog_option, dl_dir = self.get_options()
-                # print(catalog_option == 1)
+                newest_only, dl_dir = self.get_options()
                 feed = fp.parse(url)
                 episodes = feed.entries
                 if not episodes:
@@ -154,8 +153,9 @@ class Feed(Database):
                 podcast_name = feed.feed.title
                 podcast_dir = path.join(dl_dir, podcast_name)
                 # url=feed.href covers cases when rss feeds redirect to a diff URL.
+                # That was a fun one to figure out.
                 self.add_podcast(name=podcast_name, url=feed.href, directory=podcast_dir)
-                if catalog_option:  # If true, add all episodes except newest to database
+                if newest_only:
                     self.new_podcast_only(feed=feed)
                 pathlib.Path(podcast_dir).mkdir(parents=True, exist_ok=True)
                 msg = f'{podcast_name} added!'
@@ -265,9 +265,13 @@ class Feed(Database):
         return True
 
 
-class EpisodeUpdater:
+class DatabaseUpdater:
     """
-    Gets items from Queue, adds those episodes to the database
+    Gets items from a Queue, adds those episodes to the database.
+
+    Because SQLite databases can only have a single writer at a time,
+    (Reminds me of the GIL for some reason) all database
+    episode additions are done by this class.
     """
 
     def __init__(self, queue: Queue):
@@ -277,10 +281,14 @@ class EpisodeUpdater:
         self.queue = queue
         self.database = Database
         self.thread = Thread(target=self._run)
-        # self.thread.daemon = True
         self.thread.start()
 
     def _run(self):
+        """
+        Gets items from queue, and if the item isn't the poison pill, adds to
+        database
+        :return: None
+        """
         while True:
             if not self.queue.empty():
                 episode = self.queue.get()
@@ -293,11 +301,11 @@ class EpisodeUpdater:
 
 def create_database(database: str = Config.database) -> None:
     """
-            Looks in the directory of the given filename, if the file is absent,
-            it creates the database with default values.
-            :param database: string, abs path of database file
-            :return: None
-            """
+    Looks in the directory of the given filename, if the file is absent,
+    it creates the database with default values.
+    :param database: string, abs path of database file
+    :return: None
+    """
     files = [path.join(path.dirname(database), item) for item in
              listdir(path.dirname(database))]
     if database not in files:

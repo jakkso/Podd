@@ -44,10 +44,10 @@ class Podcast:
         self._dl_dir = directory
         self._logger = logger('podcast')
         _old_eps = Database().get_episodes(self._url)
-        feed = fp.parse(self._url)
-        self._name = feed.feed.title
-        self._image = feed.feed.image.href
-        self._new_episodes = [item for item in feed.entries if item.id not in _old_eps]
+        _feed = fp.parse(self._url)
+        self._name = _feed.feed.title
+        self._image = _feed.feed.image.href
+        self._new_episodes = [item for item in _feed.entries if item.id not in _old_eps]
 
     def __enter__(self):
         return self
@@ -141,21 +141,13 @@ class Episode:
                 self._mp4_tagger()
             else:
                 self._logger.warning(f'Unable to determine filetype for {self.filename}')
-        except AttributeError:
-            self._logger.warning(f'Unable to tag {self.filename}')
-        except mutagen.MutagenError:
+        except AttributeError or mutagen.MutagenError:
             self._logger.warning(f'Unable to tag {self.filename}')
 
     def _image_url(self):
         """
         :return: link to episode image if it exists and isn't the same as
         the podcast image, else None
-        This isn't even working correctly.  Well, it is and it isn't: if the
-        same image is hosted in different places, it can't detect that, but if
-        the same URL is in both places, then it will work.  At the moment,
-        I just link to the image and don't want to download the image to
-        compare them.  I wonder if there's some sort of metadata that I could
-        use instead?  More research needed
         """
         try:
             image = self.entry.image.href
