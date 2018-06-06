@@ -3,14 +3,9 @@ Sets up CLI and integrates various classes into downloader function
 """
 
 from argparse import ArgumentParser as Ag
-from multiprocessing.dummy import Pool as ThreadPool
-from queue import Queue
 
-from database import Database, Feed, DatabaseUpdater, create_database
-from message import Message
-from podcast import Podcast, Episode
-
-QUEUE = Queue()
+from database import Feed, create_database
+from downloader import downloader
 
 
 def main() -> None:
@@ -62,45 +57,6 @@ def main() -> None:
         downloader()
     else:
         parser.print_help()
-
-
-def downloader() -> None:
-    """
-    refreshes subscriptions, downloads new episodes, sends email messages
-    :return:
-    """
-    jinja_packets = []
-    to_dl = []
-    with Database() as _db:
-        subs = _db.get_podcasts()
-    for sub in subs:
-        _, url, dl_dir = sub
-        with Podcast(url, dl_dir) as pod:
-            j_packet = pod.episodes()
-            if j_packet:
-                jinja_packets.append(j_packet)
-                to_dl.extend(j_packet.episodes)
-    if jinja_packets:
-        DatabaseUpdater(QUEUE)
-        pool = ThreadPool(3)
-        pool.map(threaded_download, to_dl)
-        pool.close()
-        pool.join()
-        QUEUE.put('stop')  # 'Poison pill' to kill DatabaseUpdater worker
-        Message(jinja_packets).send()
-    else:
-        print('No new episodes')
-
-
-def threaded_download(episode: Episode) -> None:
-    """
-    :param: episode Episode obj
-    :return: None
-    """
-    print(f'Downloading {episode.title}')
-    episode.download()
-    episode.tag()
-    QUEUE.put(episode)
 
 
 if __name__ == '__main__':

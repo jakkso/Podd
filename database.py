@@ -265,40 +265,6 @@ class Feed(Database):
         return True
 
 
-class DatabaseUpdater:
-    """
-    Gets items from a Queue, adds those episodes to the database.
-
-    Because SQLite databases can only have a single writer at a time,
-    (Reminds me of the GIL for some reason) all database
-    episode additions are done by this class.
-    """
-
-    def __init__(self, queue: Queue):
-        """
-        :param queue: Queue
-        """
-        self.queue = queue
-        self.database = Database
-        self.thread = Thread(target=self._run)
-        self.thread.start()
-
-    def _run(self):
-        """
-        Gets items from queue, and if the item isn't the poison pill, adds to
-        database
-        :return: None
-        """
-        while True:
-            if not self.queue.empty():
-                episode = self.queue.get()
-                if episode == 'stop':
-                    break
-                with self.database() as _db:
-                    _db.add_episode(podcast_url=episode.podcast_url,
-                                    feed_id=episode.entry.id)
-
-
 def create_database(database: str = Config.database) -> None:
     """
     Looks in the directory of the given filename, if the file is absent,
