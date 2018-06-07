@@ -3,7 +3,7 @@ from os import path
 
 class Config:
     """
-    Rename this file to config.py and edit the below entries to your desired preferences.
+   Edit the below entries to your desired preferences.
 
     As an example, I've used a setup that will work with gmail, but in order to use
     gmail, you must enable app passwords (See https://support.google.com/mail/answer/185833?hl=en
@@ -14,7 +14,8 @@ class Config:
     """
     host = 'smtp.gmail.com'
     port = 587
-    sender = 'gmail address'
-    pw = 'gmail acount app password'
-    recipient = 'recipient email address'
+    sender = 'Replace with gmail address'
+    pw = 'Replace with gmail app specific password'
+    recipient = 'Replace with recipient email address'
+    # Database file will be placed in the same directory as this file.
     database = path.join(path.dirname(path.abspath(__file__)), 'podcasts.db')
