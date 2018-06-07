@@ -2,10 +2,8 @@
 Contains classes that directly use the database
 """
 from os import access, listdir, path, R_OK, W_OK
-from queue import Queue
 import pathlib
 import sqlite3
-from threading import Thread
 from types import TracebackType
 
 import feedparser as fp
