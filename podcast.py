@@ -56,6 +56,12 @@ class Podcast:
         if exc_type is not None:
             self._logger.error(exc_type, exc_val, exc_tb)
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self._url}, {self._dl_dir}'
+
+    def __str__(self):
+        return f'{self._name}'
+
     def episodes(self) -> JinjaPacket or False:
         """
         :return: JinjaPacket if episodes need to be downloaded, False otherwise
@@ -110,6 +116,12 @@ class Episode:
         self.image = self._image_url()
         self.url = self._audio_file_url()
         self.filename = self._file_parser()
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({self._dl_dir}, {self.entry}, {self._podcast_name}, {self.podcast_url})'
+
+    def __str__(self):
+        return f'{self.title}'
 
     def download(self) -> None:
         """

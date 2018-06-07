@@ -83,5 +83,5 @@ def threaded_downloader(eps_to_download: list):
         results = pool.map(download_worker, eps_to_download)
         pool.close()
         pool.join()
-        map(add_episode_to_db, results)
-
+        for ep in results:
+            add_episode_to_db(ep)
