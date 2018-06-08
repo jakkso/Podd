@@ -107,7 +107,17 @@ class Database:
         """
         :return: tuple of currently set options
         """
-        self.cursor.execute('SELECT new_only, download_directory FROM settings')
+        self.cursor.execute('SELECT new_only, '
+                            'download_directory, '
+                            'notification_status, '
+                            'recipient_address FROM settings')
+        return self.cursor.fetchone()
+
+    def get_credentials(self) -> tuple:
+        """
+        :return: tuple of sender_address, sender_password, and recipient_address
+        """
+        self.cursor.execute('SELECT sender_address, sender_password, recipient_address from settings where id = 1')
         return self.cursor.fetchone()
 
     def change_option(self, option: str, value: str or int) -> None:
@@ -141,7 +151,7 @@ class Feed(Database):
         """
         try:
             for url in urls:
-                newest_only, dl_dir = self.get_options()
+                newest_only, dl_dir, *_ = self.get_options()
                 feed = fp.parse(url)
                 episodes = feed.entries
                 if not episodes:
@@ -214,12 +224,16 @@ class Feed(Database):
         """
         valid_options = {0: 'New podcasts download all episodes\n',
                          1: 'New podcasts download only new episodes\n'}
-        new_only, download_directory = self.get_options()
+        email_notification_status = {0: 'Off',
+                                     1: 'On'}
+        new_only, download_directory, notification_status, recipient_address = self.get_options()
         print('-- Options --')
         print(f'{valid_options[new_only]}Download Directory: {download_directory}')
+        print(f'Email notifications: {email_notification_status[notification_status]}')
+        print(f'Email notifications sent to: {recipient_address}')
         print(f'Database file: {self._db_file}')
         print('-------------')
-        return new_only, download_directory
+        return new_only, download_directory, notification_status, recipient_address
 
     def print_subscriptions(self) -> None:
         """
@@ -270,7 +284,7 @@ class Feed(Database):
         return True
 
 
-def create_database(database: str = Config.database) -> None:
+def create_database(database: str = Config.database) -> None or True:
     """
     Looks in the directory of the given filename, if the file is absent,
     it creates the database with default values.
@@ -280,6 +294,7 @@ def create_database(database: str = Config.database) -> None:
     files = [path.join(path.dirname(database), item) for item in
              listdir(path.dirname(database))]
     if database not in files:
+        sender, password, recipient, notifications = '', '', '', False
         with Database(database) as _db:
             cur = _db.cursor
             cur.execute('CREATE TABLE IF NOT EXISTS podcasts '
@@ -295,7 +310,18 @@ def create_database(database: str = Config.database) -> None:
             cur.execute('CREATE TABLE IF NOT EXISTS settings '
                         '(id INTEGER PRIMARY KEY, '
                         'new_only BOOLEAN, '
-                        'download_directory TEXT)')
-            cur.execute('INSERT INTO settings (new_only, download_directory) VALUES (?,?)',
-                        (1, path.join(pathlib.Path.home(), 'Podcasts')), )
+                        'download_directory TEXT,'
+                        'notification_status BOOLEAN,'
+                        'sender_address TEXT,'
+                        'sender_password TEXT,'
+                        'recipient_address TEXT)')
+            cur.execute('INSERT INTO settings (new_only,'
+                        ' download_directory,'
+                        ' notification_status,'
+                        ' sender_address,'
+                        ' sender_password,'
+                        ' recipient_address) VALUES (?,?,?,?,?,?)',
+                        (1, path.join(pathlib.Path.home(), 'Podcasts'), notifications, sender, password, recipient), )
         pathlib.Path(path.join(path.dirname(path.abspath(__file__)), 'Logs')).mkdir(exist_ok=True)
+        return True
+

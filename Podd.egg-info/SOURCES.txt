@@ -14,5 +14,4 @@ podd/utilities.py
 tests/__init__.py
 tests/test_database.py
 tests/test_logger.py
-tests/testing_utilities.py
-tests/tests.py
+tests/utilities.py
