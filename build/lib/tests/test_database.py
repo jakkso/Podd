@@ -5,9 +5,9 @@ import sqlite3
 import unittest
 from unittest.mock import patch
 
-from database import Database, Feed, create_database
-from podcast import Episode, Podcast
-from utilities import load_test_objects, logger
+
+from podd.database import Database, Feed, create_database
+from tests.utilities import load_test_objects
 
 DATABASE = path.join(path.dirname(path.abspath(__file__)), 'tests.db')
 DATE = datetime(2017, 2, 8, 17, 0)
@@ -228,33 +228,6 @@ class TestFeed(Setup):
         cursor.execute('SELECT new_only FROM main.settings')
         res = cursor.fetchone()[0]
         self.assertEqual(res, 0)
-
-
-class TestLogger(unittest.TestCase):
-
-    def tearDown(self):
-
-        remove(TEST_LOG + '.log')
-
-    def test_logger(self):
-        files = listdir(path.dirname(TEST_LOG))
-        test_logger = logger('test_logger')
-        # Checks that file isn't created until a log entry is created.
-        self.assertNotIn('test_logger.log', files)
-        test_logger.info('test message!')
-        files = listdir(path.dirname(TEST_LOG))
-        self.assertIn('test_logger.log', files)
-        with open(TEST_LOG + '.log', 'r') as file:
-            line = file.read()
-        self.assertIn('test message!', line)
-
-
-class TestPodcast(unittest.TestCase):
-    pass
-
-
-class TestEpisode(unittest.TestCase):
-    pass
 
 
 if __name__ == '__main__':

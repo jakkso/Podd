@@ -1,7 +1,7 @@
-podcasts.db
-launcher.sh
-errors.log
+podd/podcasts.db
 testfiles/
-config.py
+podd/config.py
 *.log
 feeds.txt
+.config.py
+overcast_feeds.txt

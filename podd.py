@@ -4,8 +4,8 @@ Sets up CLI and integrates various classes into downloader function
 
 from argparse import ArgumentParser as Ag
 
-from database import Feed, create_database
-from downloader import downloader
+from podd.database import Feed, create_database
+from podd.downloader import downloader
 
 
 def main() -> None:

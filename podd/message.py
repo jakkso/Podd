@@ -7,8 +7,8 @@ import smtplib
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from config import Config
-from utilities import logger
+from podd.config import Config
+from podd.utilities import logger
 
 
 class Message:
@@ -62,7 +62,7 @@ class Message:
     def send(self) -> None:
         """
         Creates an email using the above rendered html and text, logs into
-        gmail and sends said email.
+        the email server (I'm using Gmail) and sends said email.
         :return: None
         """
         msg = MIMEMultipart('alternative')
@@ -73,7 +73,12 @@ class Message:
         msg.attach(MIMEText(self.html, 'html'))
         server = smtplib.SMTP(host=Config.host, port=Config.port)
         server.starttls()
-        server.login(user=Config.sender, password=Config.pw)
-        server.sendmail(Config.sender, Config.recipient, msg.as_string())
-        server.quit()
+        try:
+            server.login(user=Config.sender, password=Config.pw)
+            server.sendmail(Config.sender, Config.recipient, msg.as_string())
+            server.quit()
+        except smtplib.SMTPAuthenticationError:
+            self.logger.exception()
+            print('Login failed: Username and/or password not accepted')
+
         self.logger.info(f'Message sent to {Config.recipient}')

@@ -1,8 +1,12 @@
+"""
+Contains update and download functions
+"""
+
 from multiprocessing.dummy import Pool as ThreadPool
 
-from database import Database
-from message import Message
-from podcast import Episode, Podcast
+from podd.database import Database
+from podd.message import Message
+from podd.podcast import Episode, Podcast
 
 
 def downloader() -> None:
@@ -21,15 +25,15 @@ def downloader() -> None:
 
 def threaded_update(subscriptions: list) -> tuple:
     """
-    Creates a threadpool to get new episodes to download from rss feed.
+    Creates a ThreadPool to get new episodes to download from rss feed.
     :param subscriptions: list of tuples of names, rss feed urls and download
     directories of individual podcasts
-    :return: 2-tuple of lists
+    :return: 2-tuple of lists of jinja_packets and a list of episodes to download.
     """
 
     def update_worker(subscription: tuple) -> tuple or None:
         """
-
+        Function used by ThreadPool to update RSS feed.
         :param subscription: tuple of name, rss feed url and download directory
         :return:
         """
@@ -46,7 +50,7 @@ def threaded_update(subscriptions: list) -> tuple:
     pool.close()
     pool.join()
     for item in results:
-        if item:  # Filters out False returns from update_worker
+        if item:
             jinja_packets.append(item[0])
             to_dl.extend(item[1])
     return jinja_packets, to_dl
@@ -54,11 +58,13 @@ def threaded_update(subscriptions: list) -> tuple:
 
 def threaded_downloader(eps_to_download: list):
     """
+    Creates thread-pool to download episodes, then adds said episodes to the database
     :param eps_to_download: list of Episodes to be downloaded
     :return: None
     """
     def download_worker(episode: Episode) -> Episode:
         """
+        Function used by ThreadPool.map to download each episode.
         :param: episode Episode obj
         :return: None
         """
@@ -67,21 +73,12 @@ def threaded_downloader(eps_to_download: list):
         episode.tag()
         return episode
 
-    def add_episode_to_db(episode: Episode) -> None:
-        """
-        Adds episode ID to database.  Because of SQLite can only have a single writer,
-        after the downloads complete, all new episode IDs are added by a map function
-        :param episode:
-        :return:
-        """
-        with Database() as _db:
-            _db.add_episode(podcast_url=episode.podcast_url,
-                            feed_id=episode.entry.id)
-
     if eps_to_download:
         pool = ThreadPool(3)
         results = pool.map(download_worker, eps_to_download)
         pool.close()
         pool.join()
-        for ep in results:
-            add_episode_to_db(ep)
+        with Database() as _db:
+            for ep in results:
+                _db.add_episode(podcast_url=ep.podcast_url,
+                                feed_id=ep.entry.id)

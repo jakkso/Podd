@@ -13,8 +13,8 @@ from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3NoHeaderError
 from mutagen.mp4 import MP4
 
-from database import Database
-from utilities import logger
+from podd.database import Database
+from podd.utilities import logger
 
 # Some podcast feeds send a silly amount of headers, crashing downloader func. Default is 100
 client._MAXHEADERS = 1000
@@ -22,7 +22,11 @@ client._MAXHEADERS = 1000
 
 class Podcast:
     """
-    Contains data about a specific podcast
+    Contains data about a specific podcast.
+
+    JinjaPacket is used to organize episode and podcast info which helps when rendering
+    the email notification message.  I'm using jinja2 to render the email messages,
+    hence the name.
     """
 
     JinjaPacket = namedtuple('JinjaPacket', 'name image episodes')
@@ -80,7 +84,7 @@ class Podcast:
 
 class Episode:
     """
-    Contains data and methods to generate that data, about an episode
+    Contains data and methods to generate that data, about a single podcast episode
     """
 
     types = ('.mp3', '.m4a', '.wav', '.mp4', '.m4v', '.mov', '.avi', '.wmv')
@@ -111,7 +115,7 @@ class Episode:
         self._podcast_name = podcast_name
         self._logger = logger('episode')
         self.podcast_url = podcast_url
-        self.title = self.entry.title
+        self.title = self.entry.title.replace('/', '-')  # '/' screws up filenames
         self.summary = self.entry.summary
         self.image = self._image_url()
         self.url = self._audio_file_url()
@@ -146,20 +150,19 @@ class Episode:
         :return: None
         """
         try:
-            audio = mutagen.File(self.filename).pprint()
-            if 'mp3' in audio:
+            filetype = mutagen.File(self.filename).pprint()
+            if 'mp3' in filetype:
                 self._mp3_tagger()
-            elif 'mp4' in audio:
+            elif 'mp4' in filetype:
                 self._mp4_tagger()
             else:
                 self._logger.warning(f'Unable to determine filetype for {self.filename}')
         except AttributeError or mutagen.MutagenError:
-            self._logger.warning(f'Unable to tag {self.filename}')
+            self._logger.exception(f'Unable to tag {self.filename}')
 
     def _image_url(self):
         """
-        :return: link to episode image if it exists and isn't the same as
-        the podcast image, else None
+        :return: URL to episode image if it exists, else None
         """
         try:
             image = self.entry.image.href
@@ -171,7 +174,7 @@ class Episode:
 
     def _audio_file_url(self) -> str:
         """
-        :return: url to episode audio file.  Feed parser encloses file links in ...
+        :return: link for episode's audio file URL.  Feed parser encloses file links in ...
         enclosures!  There might be a better way to parse this.
         """
         url = None
@@ -183,11 +186,12 @@ class Episode:
     def _file_parser(self) -> path:
         """
         :return: str, ex: path/to/podcast/directory/episode.m4a
-        Defaults to .mp3 as that's the most common filetype
+        Defaults to .mp3 as that's the most common filetype.  It's a
+        hack-y assumption, but it's the most common case (The other being a .mp4)
         """
         for ext in self.types:
             if ext in self.url:
-                return path.join(self._dl_dir, ''.join([self.title.replace('/', '-'), ext]))
+                return path.join(self._dl_dir, ''.join([self.title, ext]))
         return path.join(self._dl_dir, ''.join([self.title, '.mp3']))
 
     def _mp3_tagger(self) -> None:

@@ -1,5 +1,5 @@
 """
-Contains classes that directly use the database
+Contains classes and functions that define the database API
 """
 from os import access, listdir, path, R_OK, W_OK
 import pathlib
@@ -8,13 +8,14 @@ from types import TracebackType
 
 import feedparser as fp
 
-from config import Config
-from utilities import logger
+from podd.config import Config
+from podd.utilities import logger
 
 
 class Database:
     """
-    Defines database operations
+    Defines database operations - Adding, removing, getting podcasts and episodes
+    from the database, etc
     """
 
     def __init__(self, db_file: str = Config.database):
@@ -51,7 +52,6 @@ class Database:
 
     def add_podcast(self, name: str, url: str, directory: str) -> None:
         """
-
         :param name: podcast name
         :param url: rss feed url
         :param directory: directory to store this podcast's downloaded episodes
@@ -63,7 +63,7 @@ class Database:
 
     def remove_podcast(self, url: str) -> None:
         """
-
+        Deletes all episodes associated with rss feed URL, as well as podcast entry
         :param url: rss feed url
         :return: None
         """
@@ -75,7 +75,7 @@ class Database:
 
     def get_podcasts(self) -> list:
         """
-        :return: list of tuples
+        :return: list of tuples of podcast name, url and download directory
         """
         self.cursor.execute('SELECT name, url, directory FROM main.podcasts')
         return self.cursor.fetchall()
@@ -128,7 +128,8 @@ class Database:
 
 class Feed(Database):
     """
-    Contains methods for managing rss feeds
+    Contains methods for managing rss feeds, including adding and removing podcasts
+    to database, viewing and setting options, current subscription feeds, etc
     """
 
     def add(self, *urls) -> None:
@@ -151,7 +152,7 @@ class Feed(Database):
                 podcast_name = feed.feed.title
                 podcast_dir = path.join(dl_dir, podcast_name)
                 # url=feed.href covers cases when rss feeds redirect to a diff URL.
-                # That was a fun one to figure out.
+                # That was a fun one to debug.
                 self.add_podcast(name=podcast_name, url=feed.href, directory=podcast_dir)
                 if newest_only:
                     self.new_podcast_only(feed=feed)
@@ -159,7 +160,6 @@ class Feed(Database):
                 msg = f'{podcast_name} added!'
                 print(msg)
                 self._logger.info(msg)
-
         except sqlite3.IntegrityError:
             msg = f'{podcast_name} already in database.'
             self._logger.warning(msg)
@@ -192,7 +192,8 @@ class Feed(Database):
 
     def new_podcast_only(self, feed: fp.FeedParserDict) -> None:
         """
-        Loops through episodes, adding all episodes to the database, except for the newest one
+        Loops through episodes, adding all episodes, excepting the newest, to the database,
+        Used when adding a new podcast to the database.
         :param feed: FeedParserDict of a single feed
         :return: None
         """
@@ -222,6 +223,7 @@ class Feed(Database):
 
     def print_subscriptions(self) -> None:
         """
+        Prints current subscriptions
         :return: None
         """
         print('----------Current subscriptions----------')
@@ -231,6 +233,8 @@ class Feed(Database):
 
     def set_directory_option(self, directory) -> bool:
         """
+        Sets the base download directory, where each individual podcast
+        download directory will be created
         :param directory: string, abs path to base download directory
         :return: None
         """
@@ -247,6 +251,9 @@ class Feed(Database):
 
     def set_catalog_option(self, option) -> bool:
         """
+        Sets catalog download option.  When adding new podcasts, if new_only is 1,
+        all episodes except newest will be added to database, preventing them from
+        being downloaded.  if new_only is 0, then all episodes will be downloaded.
         :param option: string, catalog option desired
         :return: None
         """
