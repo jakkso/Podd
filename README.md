@@ -25,7 +25,7 @@ In your terminal of choice, enter `python3 podd.py` followed by one of the follo
 * `-c all` or `-c new`  Sets option for newly added podcasts to download only new episodes, or the entire available back catalog.  The default behavior is to only download the newest episode.  Note: this, too, will have no effect on podcasts to which you're currently subscribed.
 * `-d` Refresh all podcasts, download new episodes and send an email notification.
 * `-e` Runs the email notification setup function, storing sender email address and password and recipient address in database
-* `-t on` or `-t off` to toggle email notifications on or off
+* `-n on` or `-n off` to toggle email notifications on or off
 
 ## Todo List
 * Add option to disable email notification messages
