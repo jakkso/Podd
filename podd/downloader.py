@@ -15,10 +15,13 @@ def downloader() -> None:
     :return:
     """
     with Database() as _db:
+        _, _, send_notifications, _ = _db.get_options()
+        sender, password, recipient = _db.get_credentials()
         jinja_packets, eps_to_download = threaded_update(_db.get_podcasts())
     if jinja_packets and eps_to_download:
         threaded_downloader(eps_to_download)
-        Message(jinja_packets).send()
+        if send_notifications:
+            Message(jinja_packets, sender, password, recipient).send()
     else:
         print('No new episodes')
 
@@ -37,7 +40,8 @@ def threaded_update(subscriptions: list) -> tuple:
         :param subscription: tuple of name, rss feed url and download directory
         :return:
         """
-        _, url, dl_dir = subscription
+        name, url, dl_dir = subscription
+        print(f'Updating {name}')
         with Podcast(url, dl_dir) as pod:
             j_packet = pod.episodes()
             if j_packet:

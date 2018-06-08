@@ -19,6 +19,7 @@ GOLD_URL = 'http://www.goldmansachs.com/exchanges-podcast/feed.rss'
 RYAN, GOLD, PETERSON = load_test_objects()
 TEST_LOG = path.join(path.join(path.dirname(path.abspath(__file__)), 'Logs'), 'test_logger')
 URL = 'examplepodcast.com/feed.rss'
+RECIP = 'mellandru@gmail.com'
 
 
 class Setup(unittest.TestCase):
@@ -45,17 +46,27 @@ class TestDatabase(Setup):
         for table in tables:
             res = cursor.execute('PRAGMA TABLE_INFO("%s")' % table).fetchall()
             if table == 'podcasts':
-                columns = ['id', 'name', 'url', 'directory']
+                columns = ['id',
+                           'name',
+                           'url',
+                           'directory']
             elif table == 'episodes':
-                columns = ['id', 'feed_id', 'podcast_id']
+                columns = ['id',
+                           'feed_id',
+                           'podcast_id']
             else:
-                columns = ['id', 'new_only', 'download_directory']
+                columns = ['id', 'new_only',
+                           'download_directory',
+                           'notification_status',
+                           'sender_address',
+                           'sender_password',
+                           'recipient_address']
             for index, column in enumerate(res):
                 name = column[1]
                 self.assertEqual(name, columns[index])
         cursor.execute('SELECT * FROM settings WHERE id = 1')
         res = cursor.fetchone()
-        self.assertEqual(res, (1, 1, HOME))
+        self.assertEqual(res, (1, 1, HOME, False, '', '', ''))
         conn.close()
 
     def test_add_podcast(self):
@@ -101,7 +112,7 @@ class TestDatabase(Setup):
 
     def test_get_options(self):
         with Database(DATABASE) as db:
-            self.assertEqual((1, HOME), db.get_options())
+            self.assertEqual((1, HOME, False, ''), db.get_options())
 
     def test_set_options(self):
         with Database(DATABASE) as db:
@@ -138,6 +149,13 @@ class TestDatabase(Setup):
         with Database(DATABASE) as db:
             self.assertEqual(db.get_episodes(URL), {'123456', '512312456', '4', '5', '6'})
             self.assertEqual(db.get_episodes(url2), {'1', '2', '3'})
+
+    def test_get_credentials(self):
+        with Database(DATABASE) as db:
+            sender, password, recipient = db.get_credentials()
+        self.assertEqual(sender, '')
+        self.assertEqual(password, '')
+        self.assertEqual(recipient, '')
 
 
 class TestFeed(Setup):
@@ -204,9 +222,11 @@ class TestFeed(Setup):
 
     def test_print_options(self):
         with Feed(DATABASE) as feed:
-            new_only, dl_dir = feed.print_options()
+            new_only, dl_dir, notify_status, recipient = feed.print_options()
         self.assertEqual(new_only, 1)
         self.assertEqual(dl_dir, HOME)
+        self.assertEqual(notify_status, 0)
+        self.assertEqual(recipient, '')
 
     def test_set_dir_option(self):
         with Feed(DATABASE) as feed:

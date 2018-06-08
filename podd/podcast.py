@@ -49,7 +49,11 @@ class Podcast:
         self._logger = logger('podcast')
         _old_eps = Database().get_episodes(self._url)
         _feed = fp.parse(self._url)
-        self._name = _feed.feed.title
+        try:
+            self._name = _feed.feed.title
+        except AttributeError:
+            self._logger.exception(f'No name for {self._url}')
+            self._name = self._url
         self._image = _feed.feed.image.href
         self._new_episodes = [item for item in _feed.entries if item.id not in _old_eps]
 
