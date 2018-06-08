@@ -16,9 +16,9 @@ class Message:
     Email renderer and sender-er
     """
 
-    __slots__ = ['logger', 'podcasts', 'text', 'html']
+    __slots__ = ['logger', 'podcasts', 'text', 'html', 'sender', 'password', 'recipient']
 
-    def __init__(self, podcasts: list):
+    def __init__(self, podcasts: list, sender: str, password: str, recipient: str):
         """
         :param podcasts: a list of named tuples, made up of JinjaPackets, as
         described below, where name, link, summary and image are all attributes
@@ -27,6 +27,9 @@ class Message:
         JinjaPacket = namedtuple('JinjaPacket', 'name link summary image episodes')
         Episode(title, summary, image, link, filename, date)
         """
+        self.sender = sender
+        self.password = password
+        self.recipient = recipient
         self.logger = logger('message')
         self.podcasts = podcasts
         self.text = self.render_text()
@@ -41,7 +44,7 @@ class Message:
         :return: rendered html
         """
         env = Environment(
-            loader=PackageLoader('message', 'templates'),
+            loader=PackageLoader('podd', 'templates'),
             autoescape=select_autoescape(['html', 'xml'])
         )
         template = env.get_template('base.html')
@@ -53,7 +56,7 @@ class Message:
         :return: rendered text page
         """
         env = Environment(
-            loader=PackageLoader('message', 'templates'),
+            loader=PackageLoader('podd', 'templates'),
             autoescape=select_autoescape(['.txt'])
         )
         template = env.get_template('base.txt')
@@ -67,18 +70,18 @@ class Message:
         """
         msg = MIMEMultipart('alternative')
         msg['Subject'] = 'Podcast Download Report'
-        msg['From'] = Config.sender
-        msg['To'] = Config.recipient
+        msg['From'] = self.sender
+        msg['To'] = self.recipient
         msg.attach(MIMEText(self.text, 'plain'))
         msg.attach(MIMEText(self.html, 'html'))
         server = smtplib.SMTP(host=Config.host, port=Config.port)
         server.starttls()
         try:
-            server.login(user=Config.sender, password=Config.pw)
-            server.sendmail(Config.sender, Config.recipient, msg.as_string())
+            server.login(user=self.sender, password=self.password)
+            server.sendmail(self.sender, self.recipient, msg.as_string())
             server.quit()
         except smtplib.SMTPAuthenticationError:
             self.logger.exception()
             print('Login failed: Username and/or password not accepted')
 
-        self.logger.info(f'Message sent to {Config.recipient}')
+        self.logger.info(f'Message sent to {self.recipient}')

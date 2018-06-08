@@ -143,6 +143,11 @@ def toggle_notifications(value: str) -> None:
         print('Invalid option')
         return
     with Database() as _db:
+        sender, *_ = _db.get_credentials()
+    if sender == '' and value == 'on':
+        print('You need to enter a valid email address.  Run `python3 podd.py -e` first.')
+        return
+    with Database() as _db:
         _db.change_option('notification_status', valid[value])
     print(f'Notifications turned {value}.')
 
