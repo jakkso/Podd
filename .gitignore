@@ -1,7 +1,7 @@
+# Misc Data files, log files, backup config file, etc
 podd/podcasts.db
+*.log*
 testfiles/
-podd/config.py
-*.log
 feeds.txt
 .config.py
 overcast_feeds.txt
