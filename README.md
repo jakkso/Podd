@@ -28,7 +28,7 @@ In your terminal of choice, enter `python3 podd.py` followed by one of the follo
 * `-n on` or `-n off` to toggle email notifications on or off
 
 ## Todo List
-~~* Add option to disable email notification messages~~
+* ~~Add option to disable email notification messages~~
 * Refactor database scheme and RSS feed parser to require less storage space and memory.
 
 ##### License
