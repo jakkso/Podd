@@ -126,7 +126,8 @@ class Episode:
         self.filename = self._file_parser()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({self._dl_dir}, {self.entry}, {self._podcast_name}, {self.podcast_url})'
+        return f'{self.__class__.__name__}({self._dl_dir}, {self.entry}, ' \
+               f'{self._podcast_name}, {self.podcast_url})'
 
     def __str__(self):
         return f'{self.title}'
@@ -161,7 +162,9 @@ class Episode:
                 self._mp4_tagger()
             else:
                 self._logger.warning(f'Unable to determine filetype for {self.filename}')
-        except AttributeError or mutagen.MutagenError:
+        except AttributeError:
+            self._logger.exception(f'Unable to tag {self.filename}')
+        except mutagen.MutagenError:
             self._logger.exception(f'Unable to tag {self.filename}')
 
     def _image_url(self):

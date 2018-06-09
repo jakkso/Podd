@@ -1,5 +1,5 @@
 """
-Sets up CLI and integrates various classes into downloader function
+Sets up CLI
 """
 
 from argparse import ArgumentParser as Ag
@@ -63,11 +63,12 @@ def parser_creator() -> Ag:
     parser.add_argument('-r', '--remove', help='Deletion menu', action='store_true')
     parser.add_argument('-c', '--catalog',
                         help='Sets option to download new episodes only or entire catalog, applied \
-                            when adding new podcasts. Valid options: all & new.')
+                            when adding new podcasts. Valid options: `all` or `new`.')
     parser.add_argument('-e', '--email_notifications', action='store_true',
                         help='Setup email notifications')
     parser.add_argument('-n', '--notifications',
-                        help='Turns email notifications on and off.  Valid options are "on" and "off".')
+                        help='Turns email notifications on and off.'
+                             '  Valid options: `on` or `off`.')
     return parser
 
 

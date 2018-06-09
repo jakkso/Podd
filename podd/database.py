@@ -25,7 +25,7 @@ class Database:
         self._conn = sqlite3.connect(self._db_file)
         self._conn.execute('PRAGMA foreign_keys=ON')
         self.cursor = self._conn.cursor()
-        self._logger = logger('database')
+        self._logger = logger(f'{self.__class__.__name__}')
 
     def __enter__(self):
         return self
@@ -119,7 +119,9 @@ class Database:
         """
         :return: tuple of sender_address, sender_password, and recipient_address
         """
-        self.cursor.execute('SELECT sender_address, sender_password, recipient_address from settings where id = 1')
+        self.cursor.execute('SELECT sender_address, '
+                            'sender_password, '
+                            'recipient_address from settings where id = 1')
         return self.cursor.fetchone()
 
     def change_option(self, option: str, value: str or int) -> None:
@@ -136,144 +138,6 @@ class Database:
         """
         self.cursor.execute(f'UPDATE settings SET {option} = ? WHERE id = 1', (value,))
         self._conn.commit()
-
-
-class Options(Database):
-    """
-    Contains methods to manage and view options stored in the database.
-    """
-
-    def toggle_notifications(self, value) -> None:
-        """
-        Turns email notifications on or off, depending upon supplied value
-        :param value:
-        :return:
-        """
-        valid = {'on': True, 'off': False}
-        if value not in valid:
-            print('Invalid option')
-            return
-        sender, *_ = self.get_credentials()
-        if sender == '' and value == 'on':
-            print('You need to enter a valid email address.  Run `python3 podd.py -e` first.')
-            return
-        self.change_option('notification_status', valid[value])
-        print(f'Notifications turned {value}.')
-
-    def email_notification_setup(self, initial_setup: bool = False) -> None:
-        """
-       Interacts with user, gets sender email address and password, as well as recipient address
-       :param initial_setup: bool if True, prints additional info
-       :return: namedtuple of sender address and password and recipient address
-       """
-
-        def credential_validation() -> bool:
-            """
-            creates a simple smtp server and attempts to log in to server using the
-            provided credentials
-            :return: bool, True if login attempt was successful, False otherwise
-            """
-            server = smtplib.SMTP(host=Config.host, port=Config.port)
-            server.starttls()
-            try:
-                status_code = server.login(user=sender_address, password=password)[0]
-                server.quit()
-                if status_code == 235:
-                    return True
-            except smtplib.SMTPAuthenticationError:
-                pass
-            return False
-
-        if initial_setup:
-            print('Looks like this is your first time running the program.')
-            choice = input('Would you like to enable email notifications? (y/n) ').lower()
-            if choice != 'y':
-                print('Email notifications disabled.')
-                return
-        print('\nNote: if you are using a Gmail account for this purpose, you need \n'
-              'to enable app-specific passwords and enter one you\'ve generated, \n'
-              'rather than your normal password.  This is somewhat risky, so it is\n'
-              'advised that you do NOT use your main gmail account for this purpose. \n'
-              'See https://support.google.com/accounts/answer/185833?hl=en for more info.\n'
-              'The default values in config.py use the ones provided by gmail, \n'
-              'if you choose to use a different email provider, replace them with the\n'
-              'correct values.\n')
-        print('First, enter in the address you want to use to send notifications')
-        try:
-            sender_address = input('Email address: ')
-            password = getpass.getpass('Password: ')
-            print('Validating password...')
-            if not credential_validation():
-                print('Login attempt failed!')
-                return
-            print('Login successful!')
-            print('\nNow enter the recipient email address.')
-            recipient_address = input('Email address: ')
-            self.change_option('sender_address', sender_address)
-            self.change_option('sender_password', password)
-            self.change_option('recipient_address', recipient_address)
-            self.change_option('notification_status', True)
-            print('Email notification enabled!')
-        except KeyboardInterrupt:
-            print('\nCanceling')
-            quit()
-
-    def print_options(self) -> tuple:
-        """
-        Prints currently selected options
-        :return: None
-        """
-        valid_options = {0: 'New podcasts download all episodes\n',
-                         1: 'New podcasts download only new episodes\n'}
-        email_notification_status = {0: 'Off',
-                                     1: 'On'}
-        new_only, download_directory, notification_status, recipient_address = self.get_options()
-        print('-- Options --')
-        print(f'{valid_options[new_only]}Download Directory: {download_directory}')
-        print(f'Email notifications: {email_notification_status[notification_status]}')
-        if notification_status:
-            print(f'Email notifications sent to: {recipient_address}')
-        print(f'Database file: {self._db_file}')
-        print('-------------')
-        return new_only, download_directory, notification_status, recipient_address
-
-    def set_directory_option(self, directory) -> bool:
-        """
-        Sets the base download directory, where each individual podcast
-        download directory will be created
-        :param directory: string, abs path to base download directory
-        :return: None
-        """
-        if access(directory, W_OK) and access(directory, R_OK):
-            self.change_option('download_directory', directory)
-            msg = f'Changed download directory to {directory}'
-            print(msg)
-            self._logger.info(msg)
-            return True
-        msg = f'Invalid directory: {directory}'
-        print(msg)
-        self._logger.warning(msg)
-        return False
-
-    def set_catalog_option(self, option) -> bool:
-        """
-        Sets catalog download option.  When adding new podcasts, if new_only is 1,
-        all episodes except newest will be added to database, preventing them from
-        being downloaded.  if new_only is 0, then all episodes will be downloaded.
-        :param option: string, catalog option desired
-        :return: None
-        """
-        valid_options = {'all': '0', 'new': '1'}
-        if option not in valid_options:
-            msg = f'Invalid option: {option}'
-            print(msg)
-            self._logger.warning(msg)
-            return False
-        self.change_option('new_only', valid_options[option])
-        msg = f'Set catalog option to {option}'
-        print(msg)
-        self._logger.info(msg)
-        return True
 
 
 class Feed(Database):
@@ -368,7 +232,144 @@ class Feed(Database):
         print('-----------------------------------------')
 
 
-def create_database(database: str = Config.database) -> None or True:
+class Options(Database):
+    """
+    Contains methods to manage and view options stored in the database.
+    """
+
+    def toggle_notifications(self, value) -> None:
+        """
+        Turns email notifications on or off, depending upon supplied value
+        :param value:
+        :return:
+        """
+        valid = {'on': True, 'off': False}
+        if value not in valid:
+            print('Invalid option')
+            return
+        sender, *_ = self.get_credentials()
+        if sender == '' and value == 'on':
+            print('You need to enter a valid email address.  Run `python3 podd.py -e` first.')
+            return
+        self.change_option('notification_status', valid[value])
+        print(f'Notifications turned {value}.')
+
+    def email_notification_setup(self, initial_setup: bool = False) -> None:
+        """
+       Interacts with user, gets sender email address and password, as well as recipient address
+       :param initial_setup: bool if True, prints additional info
+       :return: namedtuple of sender address and password and recipient address
+       """
+
+        def credential_validation() -> bool:
+            """
+            creates a simple smtp server and attempts to log in to server using the
+            provided credentials
+            :return: bool, True if login attempt was successful, False otherwise
+            """
+            server = smtplib.SMTP(host=Config.host, port=Config.port)
+            server.starttls()
+            try:
+                status_code = server.login(user=sender_address, password=password)[0]
+                server.quit()
+                if status_code == 235:
+                    return True
+            except smtplib.SMTPAuthenticationError:
+                pass
+            return False
+
+        if initial_setup:
+            print('Looks like this is your first time running the program.')
+            choice = input('Would you like to enable email notifications? (y/n) ').lower()
+            if choice != 'y':
+                print('Email notifications disabled.')
+                return
+        print('\nNote: if you are using a Gmail account for this purpose, you need \n'
+              'to enable app-specific passwords and enter one you\'ve generated, \n'
+              'rather than your normal password.  This is somewhat risky, so it is\n'
+              'advised that you do NOT use your main gmail account for this purpose. \n'
+              'See https://support.google.com/accounts/answer/185833?hl=en for more info.\n'
+              'The default values in config.py use the ones provided by gmail, \n'
+              'if you choose to use a different email provider, replace them with the\n'
+              'correct values.\n')
+        print('First, enter in the address you want to use to send notifications')
+        try:
+            sender_address = input('Email address: ')
+            password = getpass.getpass('Password: ')
+            print('Validating password...')
+            if not credential_validation():
+                print('Login attempt failed!')
+                return
+            print('Login successful!')
+            print('\nNow enter the recipient email address.')
+            recipient_address = input('Email address: ')
+            self.change_option('sender_address', sender_address)
+            self.change_option('sender_password', password)
+            self.change_option('recipient_address', recipient_address)
+            self.change_option('notification_status', True)
+            print('Email notification enabled!')
+        except KeyboardInterrupt:
+            print('\nCanceling')
+            quit()
+
+    def print_options(self) -> tuple:
+        """
+        Prints currently selected options
+        :return: None
+        """
+        valid_options = {0: 'New podcasts download all episodes\n',
+                         1: 'New podcasts download only new episodes\n'}
+        email_notification_status = {0: 'Off', 1: 'On'}
+        new_only, download_directory, notification_status, recipient_address = self.get_options()
+        print('-- Options --')
+        print(f'{valid_options[new_only]}Download Directory: {download_directory}')
+        print(f'Email notifications: {email_notification_status[notification_status]}')
+        if notification_status:
+            print(f'Email notifications sent to: {recipient_address}')
+        print(f'Database file: {self._db_file}')
+        print('-------------')
+        return new_only, download_directory, notification_status, recipient_address
+
+    def set_directory_option(self, directory) -> bool:
+        """
+        Sets the base download directory, where each individual podcast
+        download directory will be created
+        :param directory: string, abs path to base download directory
+        :return: None
+        """
+        if access(directory, W_OK) and access(directory, R_OK):
+            self.change_option('download_directory', directory)
+            msg = f'Changed download directory to {directory}'
+            print(msg)
+            self._logger.info(msg)
+            return True
+        msg = f'Invalid directory: {directory}'
+        print(msg)
+        self._logger.warning(msg)
+        return False
+
+    def set_catalog_option(self, option) -> bool:
+        """
+        Sets catalog download option.  When adding new podcasts, if new_only is 1,
+        all episodes except newest will be added to database, preventing them from
+        being downloaded.  if new_only is 0, then all episodes will be downloaded.
+        :param option: string, catalog option desired
+        :return: None
+        """
+        valid_options = {'all': '0', 'new': '1'}
+        if option not in valid_options:
+            msg = f'Invalid option: {option}'
+            print(msg)
+            self._logger.warning(msg)
+            return False
+        self.change_option('new_only', valid_options[option])
+        msg = f'Set catalog option to {option}'
+        print(msg)
+        self._logger.info(msg)
+        return True
+
+
+def create_database(database: str = Config.database) -> bool:
     """
     Looks in the directory of the given filename, if the file is absent,
     it creates the database with default values.
@@ -405,6 +406,9 @@ def create_database(database: str = Config.database) -> None or True:
                         ' sender_address,'
                         ' sender_password,'
                         ' recipient_address) VALUES (?,?,?,?,?,?)',
-                        (1, path.join(pathlib.Path.home(), 'Podcasts'), notifications, sender, password, recipient), )
-        pathlib.Path(path.join(path.dirname(path.abspath(__file__)), 'Logs')).mkdir(exist_ok=True)
+                        (1, path.join(pathlib.Path.home(), 'Podcasts'),
+                         notifications, sender, password, recipient), )
+        pathlib.Path(path.join(path.dirname(path.abspath(__file__)), 'Logs')).\
+            mkdir(exist_ok=True)
         return True
+    return False

@@ -83,6 +83,6 @@ def threaded_downloader(eps_to_download: list) -> None:
         pool.close()
         pool.join()
         with Database() as _db:
-            for ep in results:
-                _db.add_episode(podcast_url=ep.podcast_url,
-                                feed_id=ep.entry.id)
+            for epi in results:
+                _db.add_episode(podcast_url=epi.podcast_url,
+                                feed_id=epi.entry.id)
