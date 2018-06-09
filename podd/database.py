@@ -1,8 +1,10 @@
 """
 Contains classes and functions that define the database API
 """
+import getpass
 from os import access, listdir, path, R_OK, W_OK
 import pathlib
+import smtplib
 import sqlite3
 from types import TracebackType
 
@@ -136,86 +138,85 @@ class Database:
         self._conn.commit()
 
 
-class Feed(Database):
+class Options(Database):
     """
-    Contains methods for managing rss feeds, including adding and removing podcasts
-    to database, viewing and setting options, current subscription feeds, etc
+    Contains methods to manage and view options stored in the database.
     """
 
-    def add(self, *urls) -> None:
+    def toggle_notifications(self, value) -> None:
         """
-        Parses and validates rss feed urls, adds to database, creates
-        download directory for each new feed added
-        :param urls: rss feed urls
-        :return: None
+        Turns email notifications on or off, depending upon supplied value
+        :param value:
+        :return:
         """
-        try:
-            for url in urls:
-                newest_only, dl_dir, *_ = self.get_options()
-                feed = fp.parse(url)
-                episodes = feed.entries
-                if not episodes:
-                    msg = f'No episodes at {url}'
-                    print(msg)
-                    self._logger.info(msg)
-                    raise KeyError
-                podcast_name = feed.feed.title
-                podcast_dir = path.join(dl_dir, podcast_name)
-                # url=feed.href covers cases when rss feeds redirect to a diff URL.
-                # That was a fun one to debug.
-                self.add_podcast(name=podcast_name, url=feed.href, directory=podcast_dir)
-                if newest_only:
-                    self.new_podcast_only(feed=feed)
-                pathlib.Path(podcast_dir).mkdir(parents=True, exist_ok=True)
-                msg = f'{podcast_name} added!'
-                print(msg)
-                self._logger.info(msg)
-        except sqlite3.IntegrityError:
-            msg = f'{podcast_name} already in database.'
-            self._logger.warning(msg)
-            print(msg)
-        except KeyError:
-            self._logger.exception('Error, podcast not added')
-
-    def remove(self) -> None:
-        """
-        Used with simple CLI interface, used to remove a podcast from database
-        :return: None
-        """
-        podcasts = {i[0]: i[1] for i in enumerate(self.get_podcasts())}
-        if not podcasts:
-            print('You have no subscriptions!')
+        valid = {'on': True, 'off': False}
+        if value not in valid:
+            print('Invalid option')
             return
-        for num, podcast in podcasts.items():
-            print(f'{num}: {podcast[0]}')
-        try:
-            choice = int(input('Podcast number to remove: '))
-            if choice not in podcasts:
-                print('Invalid option')
-                return
-            self.remove_podcast(podcasts[choice][1])
-            msg = f'Removed {podcasts[choice][0]}'
-            print(msg)
-            self._logger.info(msg)
-        except ValueError:
-            print('Invalid option, enter a number')
+        sender, *_ = self.get_credentials()
+        if sender == '' and value == 'on':
+            print('You need to enter a valid email address.  Run `python3 podd.py -e` first.')
+            return
+        self.change_option('notification_status', valid[value])
+        print(f'Notifications turned {value}.')
 
-    def new_podcast_only(self, feed: fp.FeedParserDict) -> None:
+    def email_notification_setup(self, initial_setup: bool = False) -> None:
         """
-        Loops through episodes, adding all episodes, excepting the newest, to the database,
-        Used when adding a new podcast to the database.
-        :param feed: FeedParserDict of a single feed
-        :return: None
-        """
-        episodes = feed.entries
-        first = episodes[0].published_parsed
-        last = episodes[-1].published_parsed
-        if first < last:  # Last is the latest episode, i.e., feed is reversed
-            episodes = episodes[:-1]
-        else:
-            episodes = episodes[1:]
-        for epi in episodes:
-            self.add_episode(podcast_url=feed.href, feed_id=epi.id)
+       Interacts with user, gets sender email address and password, as well as recipient address
+       :param initial_setup: bool if True, prints additional info
+       :return: namedtuple of sender address and password and recipient address
+       """
+
+        def credential_validation() -> bool:
+            """
+            creates a simple smtp server and attempts to log in to server using the
+            provided credentials
+            :return: bool, True if login attempt was successful, False otherwise
+            """
+            server = smtplib.SMTP(host=Config.host, port=Config.port)
+            server.starttls()
+            try:
+                status_code = server.login(user=sender_address, password=password)[0]
+                server.quit()
+                if status_code == 235:
+                    return True
+            except smtplib.SMTPAuthenticationError:
+                pass
+            return False
+
+        if initial_setup:
+            print('Looks like this is your first time running the program.')
+            choice = input('Would you like to enable email notifications? (y/n) ').lower()
+            if choice != 'y':
+                print('Email notifications disabled.')
+                return
+        print('\nNote: if you are using a Gmail account for this purpose, you need \n'
+              'to enable app-specific passwords and enter one you\'ve generated, \n'
+              'rather than your normal password.  This is somewhat risky, so it is\n'
+              'advised that you do NOT use your main gmail account for this purpose. \n'
+              'See https://support.google.com/accounts/answer/185833?hl=en for more info.\n'
+              'The default values in config.py use the ones provided by gmail, \n'
+              'if you choose to use a different email provider, replace them with the\n'
+              'correct values.\n')
+        print('First, enter in the address you want to use to send notifications')
+        try:
+            sender_address = input('Email address: ')
+            password = getpass.getpass('Password: ')
+            print('Validating password...')
+            if not credential_validation():
+                print('Login attempt failed!')
+                return
+            print('Login successful!')
+            print('\nNow enter the recipient email address.')
+            recipient_address = input('Email address: ')
+            self.change_option('sender_address', sender_address)
+            self.change_option('sender_password', password)
+            self.change_option('recipient_address', recipient_address)
+            self.change_option('notification_status', True)
+            print('Email notification enabled!')
+        except KeyboardInterrupt:
+            print('\nCanceling')
+            quit()
 
     def print_options(self) -> tuple:
         """
@@ -230,20 +231,11 @@ class Feed(Database):
         print('-- Options --')
         print(f'{valid_options[new_only]}Download Directory: {download_directory}')
         print(f'Email notifications: {email_notification_status[notification_status]}')
-        print(f'Email notifications sent to: {recipient_address}')
+        if notification_status:
+            print(f'Email notifications sent to: {recipient_address}')
         print(f'Database file: {self._db_file}')
         print('-------------')
         return new_only, download_directory, notification_status, recipient_address
-
-    def print_subscriptions(self) -> None:
-        """
-        Prints current subscriptions
-        :return: None
-        """
-        print('----------Current subscriptions----------')
-        for sub in self.get_podcasts():
-            print(sub[0])
-        print('-----------------------------------------')
 
     def set_directory_option(self, directory) -> bool:
         """
@@ -282,6 +274,98 @@ class Feed(Database):
         print(msg)
         self._logger.info(msg)
         return True
+
+
+class Feed(Database):
+    """
+    Contains methods for managing rss feeds, including adding and removing podcasts
+    to database, viewing current subscription feeds, etc
+    """
+
+    def add(self, *urls) -> None:
+        """
+        Parses and validates rss feed urls, adds to database, creates
+        download directory for each new feed added
+        :param urls: rss feed urls
+        :return: None
+        """
+        try:
+            for url in urls:
+                newest_only, dl_dir, *_ = self.get_options()
+                feed = fp.parse(url)
+                episodes = feed.entries
+                if not episodes:
+                    msg = f'No episodes at {url}'
+                    print(msg)
+                    self._logger.info(msg)
+                    raise KeyError
+                podcast_name = feed.feed.title
+                podcast_dir = path.join(dl_dir, podcast_name)
+                self.add_podcast(name=podcast_name, url=feed.href, directory=podcast_dir)
+                # url=feed.href covers cases when rss feeds redirect to a diff URL.
+                # That was a fun one to debug.
+                if newest_only:
+                    self._new_podcast_only(feed=feed)
+                pathlib.Path(podcast_dir).mkdir(parents=True, exist_ok=True)
+                msg = f'{podcast_name} added!'
+                print(msg)
+                self._logger.info(msg)
+        except sqlite3.IntegrityError:
+            msg = f'{podcast_name} already in database.'
+            self._logger.warning(msg)
+            print(msg)
+        except KeyError:
+            self._logger.exception('Error, podcast not added')
+
+    def remove(self) -> None:
+        """
+        Used with simple CLI interface, used to remove a podcast from database
+        :return: None
+        """
+        podcasts = {i[0]: i[1] for i in enumerate(self.get_podcasts())}
+        if not podcasts:
+            print('You have no subscriptions!')
+            return
+        for num, podcast in podcasts.items():
+            print(f'{num}: {podcast[0]}')
+        try:
+            choice = int(input('Podcast number to remove: '))
+            if choice not in podcasts:
+                print('Invalid option')
+                return
+            self.remove_podcast(podcasts[choice][1])
+            msg = f'Removed {podcasts[choice][0]}'
+            print(msg)
+            self._logger.info(msg)
+        except ValueError:
+            print('Invalid option, enter a number')
+
+    def _new_podcast_only(self, feed: fp.FeedParserDict) -> None:
+        """
+        Loops through episodes, adding all episodes, excepting the newest, to the database,
+        Used when adding a new podcast to the database.
+        :param feed: FeedParserDict of a single feed
+        :return: None
+        """
+        episodes = feed.entries
+        first = episodes[0].published_parsed
+        last = episodes[-1].published_parsed
+        if first < last:  # Last is the latest episode, i.e., feed is reversed
+            episodes = episodes[:-1]
+        else:
+            episodes = episodes[1:]
+        for epi in episodes:
+            self.add_episode(podcast_url=feed.href, feed_id=epi.id)
+
+    def print_subscriptions(self) -> None:
+        """
+        Prints current subscriptions
+        :return: None
+        """
+        print('----------Current subscriptions----------')
+        for sub in self.get_podcasts():
+            print(sub[0])
+        print('-----------------------------------------')
 
 
 def create_database(database: str = Config.database) -> None or True:
@@ -324,4 +408,3 @@ def create_database(database: str = Config.database) -> None or True:
                         (1, path.join(pathlib.Path.home(), 'Podcasts'), notifications, sender, password, recipient), )
         pathlib.Path(path.join(path.dirname(path.abspath(__file__)), 'Logs')).mkdir(exist_ok=True)
         return True
-

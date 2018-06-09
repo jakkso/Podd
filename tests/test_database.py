@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 
-from podd.database import Database, Feed, create_database
+from podd.database import Database, Feed, Options, create_database
 from tests.utilities import load_test_objects
 
 DATABASE = path.join(path.dirname(path.abspath(__file__)), 'tests.db')
@@ -156,6 +156,10 @@ class TestDatabase(Setup):
         self.assertEqual(sender, '')
         self.assertEqual(password, '')
         self.assertEqual(recipient, '')
+        with Database(DATABASE) as db:
+            db.change_option('sender_address', 'bob@loblaw.com')
+            sender, *_ = db.get_credentials()
+        self.assertEqual(sender, 'bob@loblaw.com')
 
 
 class TestFeed(Setup):
@@ -220,8 +224,11 @@ class TestFeed(Setup):
         res = [i[0] for i in cursor.fetchall()]
         self.assertEqual(1, len(res))
 
+
+class TestOptions(Setup):
+
     def test_print_options(self):
-        with Feed(DATABASE) as feed:
+        with Options(DATABASE) as feed:
             new_only, dl_dir, notify_status, recipient = feed.print_options()
         self.assertEqual(new_only, 1)
         self.assertEqual(dl_dir, HOME)
@@ -229,18 +236,18 @@ class TestFeed(Setup):
         self.assertEqual(recipient, '')
 
     def test_set_dir_option(self):
-        with Feed(DATABASE) as feed:
+        with Options(DATABASE) as feed:
             self.assertTrue(feed.set_directory_option(str(pathlib.Path.home())))
             self.assertFalse(feed.set_directory_option('asdfa'))
 
     def test_set_catalog_option(self):
-        with Feed(DATABASE) as feed:
+        with Options(DATABASE) as feed:
             res = feed.set_catalog_option('new')
         self.assertTrue(res)
-        with Feed(DATABASE) as feed:
+        with Options(DATABASE) as feed:
             res = feed.set_catalog_option('asdfdd')
         self.assertFalse(res)
-        with Feed(DATABASE) as feed:
+        with Options(DATABASE) as feed:
             res = feed.set_catalog_option('all')
         self.assertTrue(res)
         conn = sqlite3.connect(DATABASE)

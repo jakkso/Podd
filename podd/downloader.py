@@ -11,8 +11,8 @@ from podd.podcast import Episode, Podcast
 
 def downloader() -> None:
     """
-    refreshes subscriptions, downloads new episodes, sends email messages
-    :return:
+    Refreshes subscriptions, downloads new episodes, sends email messages.
+    :return: None.
     """
     with Database() as _db:
         _, _, send_notifications, _ = _db.get_options()
@@ -60,7 +60,7 @@ def threaded_update(subscriptions: list) -> tuple:
     return jinja_packets, to_dl
 
 
-def threaded_downloader(eps_to_download: list):
+def threaded_downloader(eps_to_download: list) -> None:
     """
     Creates thread-pool to download episodes, then adds said episodes to the database
     :param eps_to_download: list of Episodes to be downloaded
