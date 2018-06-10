@@ -203,6 +203,8 @@ class Feed(Database):
             self._logger.info(msg)
         except ValueError:
             print('Invalid option, enter a number')
+        except KeyboardInterrupt:
+            print('\nCanceled')
 
     def _new_podcast_only(self, feed: fp.FeedParserDict) -> None:
         """
