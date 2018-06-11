@@ -59,6 +59,7 @@ class Database:
         :param directory: directory to store this podcast's downloaded episodes
         :return: None
         """
+        self._logger.info(f'Adding {name} {url} at {directory}')
         self.cursor.executemany('INSERT INTO podcasts (name, url, directory) VALUES (?,?,?)',
                                 ((name, url, directory),))
         self._conn.commit()
@@ -138,6 +139,9 @@ class Database:
         """
         self.cursor.execute(f'UPDATE settings SET {option} = ? WHERE id = 1', (value,))
         self._conn.commit()
+        if option == 'sender_password':
+            value = 'REDACTED'
+        self._logger.info(f'Changed {option} to {value}')
 
 
 class Feed(Database):
@@ -157,11 +161,12 @@ class Feed(Database):
             for url in urls:
                 newest_only, dl_dir, *_ = self.get_options()
                 feed = fp.parse(url)
+                self._logger.info(f'Parsing {url}')
                 episodes = feed.entries
                 if not episodes:
                     msg = f'No episodes at {url}'
                     print(msg)
-                    self._logger.info(msg)
+                    self._logger.warning(msg)
                     raise KeyError
                 podcast_name = feed.feed.title
                 podcast_dir = path.join(dl_dir, podcast_name)
@@ -254,7 +259,9 @@ class Options(Database):
             print('You need to enter a valid email address.  Run `python3 podd.py -e` first.')
             return
         self.change_option('notification_status', valid[value])
-        print(f'Notifications turned {value}.')
+        msg = f'Notifications turned {value}.'
+        print(msg)
+        self._logger.info(msg)
 
     def email_notification_setup(self, initial_setup: bool = False) -> None:
         """
@@ -284,7 +291,9 @@ class Options(Database):
             print('Looks like this is your first time running the program.')
             choice = input('Would you like to enable email notifications? (y/n) ').lower()
             if choice != 'y':
-                print('Email notifications disabled.')
+                msg = 'Email notifications disabled.'
+                print(msg)
+                self._logger.info(msg)
                 return
         print('\nNote: if you are using a Gmail account for this purpose, you need \n'
               'to enable app-specific passwords and enter one you\'ve generated, \n'
@@ -300,16 +309,22 @@ class Options(Database):
             password = getpass.getpass('Password: ')
             print('Validating password...')
             if not credential_validation():
-                print('Login attempt failed!')
+                msg = 'Login attempt failed!  Bad username or password!'
+                self._logger.warning(msg)
+                print(msg)
                 return
-            print('Login successful!')
+            msg = 'Email authentication successful.'
+            self._logger.info(msg)
+            print(msg)
             print('\nNow enter the recipient email address.')
             recipient_address = input('Email address: ')
             self.change_option('sender_address', sender_address)
             self.change_option('sender_password', password)
             self.change_option('recipient_address', recipient_address)
             self.change_option('notification_status', True)
-            print('Email notification enabled!')
+            msg = 'Email notification enabled!'
+            print(msg)
+            self._logger.info(msg)
         except KeyboardInterrupt:
             print('\nCanceling')
             quit()

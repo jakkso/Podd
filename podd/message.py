@@ -81,7 +81,8 @@ class Message:
             server.sendmail(self.sender, self.recipient, msg.as_string())
             server.quit()
         except smtplib.SMTPAuthenticationError:
-            self.logger.exception()
-            print('Login failed: Username and/or password not accepted')
+            msg = 'Login failed: Username and/or password not accepted'
+            self.logger.exception(msg)
+            print(msg)
 
         self.logger.info(f'Message sent to {self.recipient}')

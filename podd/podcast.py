@@ -80,9 +80,11 @@ class Podcast:
                                     self._name,
                                     self._url)
                             for entry in self._new_episodes]
+            self._logger.debug(f'{len(episode_list)} new episodes of {self._name}')
             return self.JinjaPacket(self._name,
                                     self._image,
                                     episode_list)
+        self._logger.debug(f'No episodes for {self._name}')
         return False
 
 
@@ -95,7 +97,7 @@ class Episode:
 
     __slots__ = ['_dl_dir',
                  'entry',
-                 '_podcast_name',
+                 'podcast_name',
                  '_logger',
                  'podcast_url',
                  'title',
@@ -116,7 +118,7 @@ class Episode:
         """
         self._dl_dir = directory
         self.entry = entry
-        self._podcast_name = podcast_name
+        self.podcast_name = podcast_name
         self._logger = logger('episode')
         self.podcast_url = podcast_url
         self.title = self.entry.title.replace('/', '-')  # '/' screws up filenames
@@ -127,7 +129,7 @@ class Episode:
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self._dl_dir}, {self.entry}, ' \
-               f'{self._podcast_name}, {self.podcast_url})'
+               f'{self.podcast_name}, {self.podcast_url})'
 
     def __str__(self):
         return f'{self.title}'
@@ -141,11 +143,13 @@ class Episode:
             urlretrieve(self.url, filename=self.filename)
             self._logger.info(f'Downloaded {self.filename}')
         except HTTPError:
-            self._logger.exception(f'Connection error, unable to download {self.url}')
-            print(f'Connection error, unable to download {self.url}')
+            msg = f'Connection error, unable to download {self.url}'
+            self._logger.exception(msg)
+            print(msg)
         except FileNotFoundError:
-            self._logger.exception(f'Unable to open file or directory at {self.filename}')
-            print(f'Unable to open {self.filename}')
+            msg = f'Unable to open file or directory at {self.filename}'
+            self._logger.exception(msg)
+            print(msg)
 
     def tag(self) -> None:
         """
@@ -161,7 +165,7 @@ class Episode:
             elif 'mp4' in filetype:
                 self._mp4_tagger()
             else:
-                self._logger.warning(f'Unable to determine filetype for {self.filename}')
+                self._logger.warning(f'Unable to determine filetype for {self.filename}, cannot tag')
         except AttributeError:
             self._logger.exception(f'Unable to tag {self.filename}')
         except mutagen.MutagenError:
@@ -175,7 +179,7 @@ class Episode:
             image = self.entry.image.href
         except AttributeError:
             image = None
-            self._logger.info(f'No image found for {self._podcast_name}'
+            self._logger.info(f'No image found for {self.podcast_name}'
                               f' episode {self.title})')
         return image
 
@@ -199,6 +203,7 @@ class Episode:
         for ext in self.types:
             if ext in self.url:
                 return path.join(self._dl_dir, ''.join([self.title, ext]))
+        self._logger.warning(f'Unable to determine extension for {self.url}')
         return path.join(self._dl_dir, ''.join([self.title, '.mp3']))
 
     def _mp3_tagger(self) -> None:
@@ -209,11 +214,12 @@ class Episode:
         try:
             tag = EasyID3(self.filename)
         except ID3NoHeaderError:
+            self._logger.info(f'Adding header to {self.filename}')
             tag = mutagen.File(self.filename, easy=True)
             tag.add_tags()
         tag[u'title'] = self.title
-        tag[u'artist'] = self._podcast_name
-        tag[u'album'] = self._podcast_name
+        tag[u'artist'] = self.podcast_name
+        tag[u'album'] = self.podcast_name
         tag[u'genre'] = 'Podcast'
         tag.save(self.filename)
         self._logger.info(f'Tagged {self.filename}')
@@ -225,8 +231,8 @@ class Episode:
         """
         tag = mutagen.mp4.MP4(self.filename).tags
         tag['\xa9nam'] = self.title
-        tag['\xa9ART'] = self._podcast_name  # Artist
-        tag['\xa9alb'] = self._podcast_name  # Album
+        tag['\xa9ART'] = self.podcast_name  # Artist
+        tag['\xa9alb'] = self.podcast_name  # Album
         tag['\xa9gen'] = 'Podcast'  # Genre
         tag.save(self.filename)
         self._logger.info(f'Tagged {self.filename}')

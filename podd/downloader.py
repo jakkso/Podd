@@ -72,7 +72,7 @@ def threaded_downloader(eps_to_download: list) -> None:
         :param: episode Episode obj
         :return: None
         """
-        print(f'Downloading {episode.title}')
+        print(f'Downloading {episode.podcast_name} - {episode.title}')
         episode.download()
         episode.tag()
         return episode
