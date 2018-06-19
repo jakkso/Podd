@@ -12,7 +12,7 @@ requirements = [
 
 setuptools.setup(
     name='Podd',
-    version='0.1.3',
+    version='0.1.5',
     author='Alexander Potts',
     author_email='alexander.potts@gmail.com',
     description='A Podcast downloader',
@@ -32,5 +32,9 @@ setuptools.setup(
             'podd = podd.__main__:podd'
         ]
     },
+    include_package_data=True,
+    data_files=[('podd/templates', ['podd/templates/base.txt',
+                                    'podd/templates/base.html',
+                                    'podd/templates/_podcast.html'])]
 )
 
