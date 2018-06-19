@@ -4,11 +4,11 @@ Sets up CLI
 
 from argparse import ArgumentParser as Ag
 
-from podd.database import Feed, Options, create_database
+from podd.database import Feed, Options
 from podd.downloader import downloader
 
 
-def main() -> None:
+def cli() -> None:
     """
     CLI implementation
     :return: None
@@ -70,9 +70,3 @@ def parser_creator() -> Ag:
                         help='Turns email notifications on and off.'
                              '  Valid options: `on` or `off`.')
     return parser
-
-
-if __name__ == '__main__':
-    if create_database():
-        Options().email_notification_setup(initial_setup=True)
-    main()
