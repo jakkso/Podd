@@ -17,6 +17,7 @@ setuptools.setup(
     author_email='alexander.potts@gmail.com',
     description='A Podcast downloader',
     long_description=long_description,
+    long_description_content_type="text/markdown",
     url='https://github.com/jakkso/Podd',
     packages=setuptools.find_packages(),
     classifiers=(
