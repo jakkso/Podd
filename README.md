@@ -8,7 +8,9 @@ and [mutagen](https://mutagen.readthedocs.io/en/latest/) for rudimentary tagging
 ## Installation
 Clone this repo, run `pip3 install -r requirements.txt` to install dependencies.
 
-Next, edit `config.py`, replacing `sender`,  `pw`, and `recipient` with the correct values.  I use a spare Gmail account to send the notification email messages.  Using app-specific passwords like I'm doing here is a bit of a security risk, which is why I recommend not using your main Gmail account.  If you want to go this route,  you'll need to enable [app-specific passwords](https://support.google.com/accounts/answer/185833?hl=en)
+Next, take a look at `config.py`.  I use a spare Gmail account to send the notification email messages, if you plan on doing the same, the `host` and `port` values are fine.  Using app-specific passwords like I'm doing here is a bit of a security risk, which is why I recommend not using your main Gmail account.  If you want to go this route,  you'll need to enable [app-specific passwords](https://support.google.com/accounts/answer/185833?hl=en).
+
+By default, `database` setting places the sqlite database in the same directory as `config.py`.  If you want to put it someplace else, just change that line to where you want it to be.
 
 ### Requirements
 * Python 3.6+ (F-strings are the bomb!)
@@ -28,8 +30,7 @@ In your terminal of choice, enter `python3 podd.py` followed by one of the follo
 * `-n on` or `-n off` to toggle email notifications on or off
 
 ## Todo List
-* ~~Add option to disable email notification messages~~
-* Refactor database scheme and RSS feed parser to require less storage space and memory.
+* At the moment, nothing, I'm pretty happy with where the project is.
 
 ##### License
 GPL v2.0, see LICENSE.txt
