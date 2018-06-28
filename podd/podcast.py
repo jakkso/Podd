@@ -220,6 +220,7 @@ class Episode:
         tag[u'title'] = self.title
         tag[u'artist'] = self.podcast_name
         tag[u'album'] = self.podcast_name
+        tag[u'albumartist'] = self.podcast_name
         tag[u'genre'] = 'Podcast'
         tag.save(self.filename)
         self._logger.info(f'Tagged {self.filename}')
@@ -233,6 +234,7 @@ class Episode:
         tag['\xa9nam'] = self.title
         tag['\xa9ART'] = self.podcast_name  # Artist
         tag['\xa9alb'] = self.podcast_name  # Album
+        tag['aART'] = self.podcast_name # Album artist
         tag['\xa9gen'] = 'Podcast'  # Genre
         tag.save(self.filename)
         self._logger.info(f'Tagged {self.filename}')

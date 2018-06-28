@@ -12,7 +12,7 @@ requirements = [
 
 setuptools.setup(
     name='Podd',
-    version='0.1.5',
+    version='0.1.6',
     author='Alexander Potts',
     author_email='alexander.potts@gmail.com',
     description='A Podcast downloader',
