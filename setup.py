@@ -1,5 +1,7 @@
 import setuptools
 
+from podd.config import Config
+
 with open('README.md') as file:
     long_description = file.read()
 
@@ -11,7 +13,7 @@ requirements = [
 
 setuptools.setup(
     name='Podd',
-    version='0.1.7',
+    version=Config.version,
     author='Alexander Potts',
     author_email='alexander.potts@gmail.com',
     description='A Podcast downloader',

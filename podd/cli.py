@@ -4,6 +4,7 @@ Sets up CLI
 
 from argparse import ArgumentParser as Ag
 
+from podd.config import Config
 from podd.database import Feed, Options
 from podd.downloader import downloader
 
@@ -39,6 +40,8 @@ def cli() -> None:
         Options().email_notification_setup()
     elif args.notifications:
         Options().toggle_notifications(args.notifications.lower())
+    elif args.version:
+        print(Config.version)
     else:
         parser.print_help()
 
@@ -69,4 +72,7 @@ def parser_creator() -> Ag:
     parser.add_argument('-n', '--notifications',
                         help='Turns email notifications on and off.'
                              '  Valid options: `on` or `off`.')
+    parser.add_argument('-v', '--version',
+                        help='Prints program version',
+                        action='store_true')
     return parser
