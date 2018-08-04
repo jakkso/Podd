@@ -7,12 +7,11 @@ requirements = [
     'feedparser',
     'jinja2',
     'mutagen'
-
 ]
 
 setuptools.setup(
     name='Podd',
-    version='0.1.6',
+    version='0.1.7',
     author='Alexander Potts',
     author_email='alexander.potts@gmail.com',
     description='A Podcast downloader',
@@ -38,4 +37,3 @@ setuptools.setup(
                                     'podd/templates/base.html',
                                     'podd/templates/_podcast.html'])]
 )
-

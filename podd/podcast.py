@@ -5,7 +5,7 @@ from collections import namedtuple
 from os import path
 from http import client
 from urllib.request import urlretrieve
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import feedparser as fp
 import mutagen
@@ -142,12 +142,16 @@ class Episode:
         try:
             urlretrieve(self.url, filename=self.filename)
             self._logger.info(f'Downloaded {self.filename}')
-        except HTTPError:
-            msg = f'Connection error, unable to download {self.url}'
+        except FileNotFoundError:
+            msg = f'Unable to open file or directory at {self.filename}.'
             self._logger.exception(msg)
             print(msg)
-        except FileNotFoundError:
-            msg = f'Unable to open file or directory at {self.filename}'
+        except HTTPError:
+            msg = f'Connection error URL: {self.url}.'
+            self._logger.exception(msg)
+            print(msg)
+        except URLError as error:
+            msg = f'Connection error {error} URL: {self.url} Filename: {self.filename}.'
             self._logger.exception(msg)
             print(msg)
 
