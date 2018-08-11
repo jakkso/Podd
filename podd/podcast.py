@@ -121,8 +121,8 @@ class Episode:
         self.podcast_name = podcast_name
         self._logger = logger('episode')
         self.podcast_url = podcast_url
-        self.title = self.entry.title.replace('/', '-')  # '/' screws up filenames
-        self.summary = self.entry.summary
+        self.title = self.entry.get('title', 'No title available.').replace('/', '-')  # '/' screws up filenames
+        self.summary = self.entry.get('summary', 'No summary available.')
         self.image = self._image_url()
         self.url = self._audio_file_url()
         self.filename = self._file_parser()
@@ -177,7 +177,10 @@ class Episode:
 
     def _image_url(self):
         """
-        :return: URL to episode image if it exists, else None
+        Doing the error parsing here instead of just in a pair of nested .get().get() because
+        this is both clearer and it doesn't matter at which level the dictionary lookup fails,
+        any lookup failure means that there isn't an image url.
+        :return: URL to episode image if it exists, else None.
         """
         try:
             image = self.entry.image.href
