@@ -48,13 +48,13 @@ class Podcast:
         self._dl_dir = directory
         self._logger = logger('podcast')
         _old_eps = Database().get_episodes(self._url)
-        _feed = fp.parse(self._url)
+        _feed: fp.FeedParserDict = fp.parse(self._url)
+        self._name = _feed.feed.get('title', default=self._url)
         try:
-            self._name = _feed.feed.title
-        except AttributeError:
-            self._logger.exception(f'No name for {self._url}')
-            self._name = self._url
-        self._image = _feed.feed.image.href
+            self._image = _feed.feed.image.href
+        except (KeyError, AttributeError):
+            self._logger.exception(f'No image for {self._url}')
+            self._image = None
         self._new_episodes = [item for item in _feed.entries if item.id not in _old_eps]
 
     def __enter__(self):
