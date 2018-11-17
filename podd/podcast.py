@@ -4,6 +4,7 @@ Contains classes used to refresh podcast feeds and download episodes
 from collections import namedtuple
 from os import path
 from http import client
+from ssl import CertificateError
 from urllib.request import urlretrieve
 from urllib.error import HTTPError, URLError
 
@@ -104,7 +105,8 @@ class Episode:
                  'summary',
                  'image',
                  'url',
-                 'filename']
+                 'filename',
+                 'error']
 
     def __init__(self,
                  directory: str,
@@ -117,6 +119,7 @@ class Episode:
         :param podcast_name:
         """
         self._dl_dir = directory
+        self.error: bool = None
         self.entry = entry
         self.podcast_name = podcast_name
         self._logger = logger('episode')
@@ -145,14 +148,22 @@ class Episode:
         except FileNotFoundError:
             msg = f'Unable to open file or directory at {self.filename}.'
             self._logger.exception(msg)
+            self.error = True
             print(msg)
         except HTTPError:
             msg = f'Connection error URL: {self.url}.'
             self._logger.exception(msg)
+            self.error = True
             print(msg)
         except URLError as error:
             msg = f'Connection error {error} URL: {self.url} Filename: {self.filename}.'
             self._logger.exception(msg)
+            self.error = True
+            print(msg)
+        except CertificateError as error:
+            msg = f'Certificate error {error} URL: {self.url} Filename: {self.filename}'
+            self._logger.exception(msg)
+            self.error = True
             print(msg)
 
     def tag(self) -> None:
@@ -162,6 +173,8 @@ class Episode:
         is either mp3 or mp4.  Otherwise, passes
         :return: None
         """
+        if self.error:
+            return
         try:
             filetype = mutagen.File(self.filename).pprint()
             if 'mp3' in filetype:

@@ -70,12 +70,13 @@ def threaded_downloader(eps_to_download: list) -> None:
         """
         Function used by ThreadPool.map to download each episode.
         :param: episode Episode obj
-        :return: None
+        :return: Noned
         """
         print(f'Downloading {episode.podcast_name} - {episode.title}')
         episode.download()
         episode.tag()
-        return episode
+        if not episode.error:
+            return episode
 
     if eps_to_download:
         pool = ThreadPool(3)
@@ -84,5 +85,6 @@ def threaded_downloader(eps_to_download: list) -> None:
         pool.join()
         with Database() as _db:
             for epi in results:
-                _db.add_episode(podcast_url=epi.podcast_url,
-                                feed_id=epi.entry.id)
+                if epi:
+                    _db.add_episode(podcast_url=epi.podcast_url,
+                                    feed_id=epi.entry.id)
