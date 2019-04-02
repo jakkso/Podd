@@ -1,4 +1,4 @@
-from os import path
+import pathlib
 
 
 class Config:
@@ -11,5 +11,5 @@ class Config:
     """
     host = 'smtp.gmail.com'
     port = 587
-    database = path.join(path.dirname(path.abspath(__file__)), 'podcasts.db')
-    version = '0.1.11'
+    database = str(pathlib.Path(__file__).parent.joinpath('podcasts.db'))
+    version = '0.1.12'

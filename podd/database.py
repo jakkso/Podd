@@ -2,7 +2,7 @@
 Contains classes and functions that define the database API
 """
 import getpass
-from os import access, listdir, path, R_OK, W_OK
+from os import access, R_OK, W_OK
 import pathlib
 import smtplib
 import sqlite3
@@ -110,7 +110,7 @@ class Database:
         """
         :return: tuple of currently set options
         """
-        self.cursor.execute('SELECT new_only, '
+        self.cursor.execute('SELECT '
                             'download_directory, '
                             'notification_status, '
                             'recipient_address FROM settings')
@@ -150,41 +150,38 @@ class Feed(Database):
     to database, viewing current subscription feeds, etc
     """
 
-    def add(self, *urls) -> None:
+    def add(self, url, newest_only: bool=False) -> None:
         """
         Parses and validates rss feed urls, adds to database, creates
         download directory for each new feed added
-        :param urls: rss feed urls
+        :param newest_only: bool if set,
+        :param url: rss feed url
         :return: None
         """
         try:
-            for url in urls:
-                newest_only, dl_dir, *_ = self.get_options()
-                feed = fp.parse(url)
-                self._logger.info(f'Parsing {url}')
-                episodes = feed.entries
-                if not episodes:
-                    msg = f'No episodes at {url}'
-                    print(msg)
-                    self._logger.warning(msg)
-                    raise KeyError
+            dl_dir, *_ = self.get_options()
+            feed = fp.parse(url)
+            self._logger.info(f'Parsing {url}')
+            episodes = feed.entries
+            if not episodes:
+                msg = f'No episodes at {url}'
+                self._logger.warning(msg)
+            else:
                 podcast_name = feed.feed.title
-                podcast_dir = path.join(dl_dir, podcast_name)
+                # podcast_dir = path.join(dl_dir, podcast_name)
+                podcast_dir = pathlib.Path(dl_dir).joinpath(podcast_name)
+                podcast_dir.mkdir(parents=True, exist_ok=True)
                 self.add_podcast(name=podcast_name, url=feed.href, directory=podcast_dir)
                 # url=feed.href covers cases when rss feeds redirect to a diff URL.
                 # That was a fun one to debug.
                 if newest_only:
                     self._new_podcast_only(feed=feed)
-                pathlib.Path(podcast_dir).mkdir(parents=True, exist_ok=True)
-                msg = f'{podcast_name} added!'
-                print(msg)
+                msg = f'{podcast_name} added'
                 self._logger.info(msg)
         except sqlite3.IntegrityError:
             msg = f'{podcast_name} already in database.'
             self._logger.warning(msg)
-            print(msg)
-        except KeyError:
-            self._logger.exception('Error, podcast not added')
+        print(msg)
 
     def remove(self) -> None:
         """
@@ -233,10 +230,14 @@ class Feed(Database):
         Prints current subscriptions
         :return: None
         """
-        print('----------Current subscriptions----------')
-        for sub in self.get_podcasts():
-            print(sub[0])
-        print('-----------------------------------------')
+        subs = self.get_podcasts()
+        if subs:
+            print('----------Current subscriptions----------')
+            for sub in subs:
+                print(sub[0])
+            print('-----------------------------------------')
+        else:
+            print('No active subscriptions.')
 
 
 class Options(Database):
@@ -393,8 +394,7 @@ def create_database(database: str = Config.database) -> bool:
     :param database: string, abs path of database file
     :return: None
     """
-    files = [path.join(path.dirname(database), item) for item in
-             listdir(path.dirname(database))]
+    files = pathlib.Path(database).parent.iterdir()
     if database not in files:
         sender, password, recipient, notifications = '', '', '', False
         with Database(database) as _db:
@@ -411,21 +411,22 @@ def create_database(database: str = Config.database) -> bool:
                         'FOREIGN KEY (podcast_id) REFERENCES podcasts(id))')
             cur.execute('CREATE TABLE IF NOT EXISTS settings '
                         '(id INTEGER PRIMARY KEY, '
-                        'new_only BOOLEAN, '
                         'download_directory TEXT,'
                         'notification_status BOOLEAN,'
                         'sender_address TEXT,'
                         'sender_password TEXT,'
                         'recipient_address TEXT)')
-            cur.execute('INSERT INTO settings (new_only,'
+            cur.execute('INSERT INTO settings ('
                         ' download_directory,'
                         ' notification_status,'
                         ' sender_address,'
                         ' sender_password,'
-                        ' recipient_address) VALUES (?,?,?,?,?,?)',
-                        (1, path.join(pathlib.Path.home(), 'Podcasts'),
-                         notifications, sender, password, recipient), )
-        pathlib.Path(path.join(path.dirname(path.abspath(__file__)), 'Logs')).\
-            mkdir(exist_ok=True)
+                        ' recipient_address) VALUES (?,?,?,?,?)',
+                        (str(pathlib.Path.home().joinpath('Podcasts')),
+                         notifications,
+                         sender,
+                         password,
+                         recipient))
+        pathlib.Path(__file__).parent.joinpath('Logs').mkdir(exist_ok=True)
         return True
     return False

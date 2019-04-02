@@ -15,7 +15,7 @@ def downloader() -> None:
     :return: None.
     """
     with Database() as _db:
-        _, _, send_notifications, _ = _db.get_options()
+        _, send_notifications, _ = _db.get_options()
         sender, password, recipient = _db.get_credentials()
         jinja_packets, eps_to_download = threaded_update(_db.get_podcasts())
     if jinja_packets and eps_to_download:

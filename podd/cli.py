@@ -64,9 +64,6 @@ def parser_creator() -> Ag:
     parser.add_argument('-A', '--ADD', help='Add line separated file of feeds to database')
     parser.add_argument('-o', '--option', help='Prints currently set options', action='store_true')
     parser.add_argument('-r', '--remove', help='Deletion menu', action='store_true')
-    parser.add_argument('-c', '--catalog',
-                        help='Sets option to download new episodes only or entire catalog, applied \
-                            when adding new podcasts. Valid options: `all` or `new`.')
     parser.add_argument('-e', '--email_notifications', action='store_true',
                         help='Setup email notifications')
     parser.add_argument('-n', '--notifications',
