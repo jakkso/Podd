@@ -154,6 +154,11 @@ class Episode:
         try:
             urlretrieve(self.url, filename=self.filename)
             self._logger.info(f'Downloaded {self.filename}')
+        except ConnectionRefusedError:
+            msg = f'Connection refused error: {self.url}'
+            self._logger.error(msg)
+            self.error = True
+            print(msg)
         except FileNotFoundError:
             msg = f'Unable to open file or directory at {self.filename}.'
             self._logger.exception(msg)
