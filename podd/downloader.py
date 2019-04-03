@@ -1,8 +1,7 @@
-"""
-Contains update and download functions
-"""
+"""Contain update and download functions."""
 
 from multiprocessing.dummy import Pool as ThreadPool
+from typing import List
 
 from podd.database import Database
 from podd.message import Message
@@ -10,7 +9,8 @@ from podd.podcast import Episode, Podcast
 
 
 def downloader() -> None:
-    """
+    """Download all new episodes.
+
     Refreshes subscriptions, downloads new episodes, sends email messages.
     :return: None.
     """
@@ -27,15 +27,16 @@ def downloader() -> None:
 
 
 def threaded_update(subscriptions: list) -> tuple:
-    """
-    Creates a ThreadPool to get new episodes to download from rss feed.
+    """Create a ThreadPool to get new episodes to download from rss feed.
+
     :param subscriptions: list of tuples of names, rss feed urls and download
     directories of individual podcasts
     :return: 2-tuple of lists of jinja_packets and a list of episodes to download.
     """
 
     def update_worker(subscription: tuple) -> tuple or None:
-        """
+        """Get update for single podcast.
+
         Function used by ThreadPool to update RSS feed.
         :param subscription: tuple of name, rss feed url and download directory
         :return:
@@ -60,14 +61,15 @@ def threaded_update(subscriptions: list) -> tuple:
     return jinja_packets, to_dl
 
 
-def threaded_downloader(eps_to_download: list) -> None:
-    """
-    Creates thread-pool to download episodes, then adds said episodes to the database
+def threaded_downloader(eps_to_download: List[Episode]) -> None:
+    """Create thread-pool to download episodes.
+
     :param eps_to_download: list of Episodes to be downloaded
     :return: None
     """
     def download_worker(episode: Episode) -> Episode:
-        """
+        """Download and tag episode.
+
         Function used by ThreadPool.map to download each episode.
         :param: episode Episode obj
         :return: Noned

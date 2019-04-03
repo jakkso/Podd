@@ -1,14 +1,13 @@
-"""
-Contains logger utility function as well as logger setup func
-"""
+"""Contain logging utility functions."""
+
 import logging
 from logging.handlers import RotatingFileHandler
 from os import getenv, mkdir, path
 
 
 def logger(name, level=logging.DEBUG) -> logging.getLogger:
-    """
-    Creates logger
+    """Create logger.
+
     :param name: name of logger
     :param level: logging level to use with this logger
     :return: logging.getLogger
@@ -32,7 +31,8 @@ def logger(name, level=logging.DEBUG) -> logging.getLogger:
 
 
 def logger_setup(name: str) -> str:
-    """
+    """Setup logger.
+
     :param name: name of log file.
     Makes general log directory in home folder, then Podd directory inside
     that.  This is a userland utility, therefore creating logs in /var/log

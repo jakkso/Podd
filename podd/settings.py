@@ -1,8 +1,11 @@
+"""Contain configuration class."""
+
 import pathlib
 
 
 class Config:
-    """
+    """Contain configuration values.
+
     Edit the below entries to your desired preferences.
     As an example, I've used a setup that will work with Gmail, as far as host and port go.
 

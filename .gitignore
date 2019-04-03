@@ -5,3 +5,8 @@ testfiles/
 feeds.txt
 .config.py
 overcast_feeds.txt
+notes.md
+
+Podd.egg-info
+build
+dist

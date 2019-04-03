@@ -1,6 +1,4 @@
-"""
-Contains email message implementation
-"""
+"""Implement email message functionality."""
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
@@ -12,14 +10,13 @@ from podd.utilities import logger
 
 
 class Message:
-    """
-    Email renderer and sender-er
-    """
+    """Render and send emails."""
 
     __slots__ = ['logger', 'podcasts', 'text', 'html', 'sender', 'password', 'recipient']
 
     def __init__(self, podcasts: list, sender: str, password: str, recipient: str):
-        """
+        """Init method.
+
         :param podcasts: a list of named tuples, made up of JinjaPackets, as
         described below, where name, link, summary and image are all attributes
         related to that individual podcast.  Episodes are are a list
@@ -36,10 +33,12 @@ class Message:
         self.html = self.render_html()
 
     def __repr__(self):
+        """`repr` method."""
         return f'{self.__class__.__name__}({self.podcasts})'
 
     def render_html(self):
-        """
+        """Render HTML email.
+
         Uses self.podcasts to render an html page
         :return: rendered html
         """
@@ -51,7 +50,8 @@ class Message:
         return template.render(podcasts=self.podcasts)
 
     def render_text(self):
-        """
+        """Render text email.
+
         Uses self.podcasts to render a text page
         :return: rendered text page
         """
@@ -63,7 +63,8 @@ class Message:
         return template.render(podcasts=self.podcasts)
 
     def send(self) -> None:
-        """
+        """Create and send email message.
+
         Creates an email using the above rendered html and text, logs into
         the email server (I'm using Gmail) and sends said email.
         :return: None

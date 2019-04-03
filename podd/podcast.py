@@ -1,6 +1,5 @@
-"""
-Contains classes used to refresh podcast feeds and download episodes
-"""
+"""Define podcast & episode objects."""
+
 from collections import namedtuple
 from os import path
 from http import client
@@ -22,7 +21,8 @@ client._MAXHEADERS = 1000
 
 
 class Podcast:
-    """
+    """Define podcast model.
+
     Contains data about a specific podcast.
 
     JinjaPacket is used to organize episode and podcast info which helps when rendering
@@ -40,7 +40,7 @@ class Podcast:
                  '_new_episodes']
 
     def __init__(self, url: str, directory: str):
-        """
+        """init method.
 
         :param url: rss feed url for this podcast
         :param directory: download directory for this podcast
@@ -59,20 +59,25 @@ class Podcast:
         self._new_episodes = [item for item in _feed.entries if item.id not in _old_eps]
 
     def __enter__(self):
+        """Context method."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context method."""
         if exc_type is not None:
             self._logger.error(exc_type, exc_val, exc_tb)
 
     def __repr__(self):
+        """`repr` method."""
         return f'{self.__class__.__name__}({self._url}, {self._dl_dir}'
 
     def __str__(self):
+        """`str` method."""
         return f'{self._name}'
 
     def episodes(self) -> JinjaPacket or False:
-        """
+        """Return episodes to be downloaded.
+
         :return: JinjaPacket if episodes need to be downloaded, False otherwise
         """
         if self._new_episodes:
@@ -90,7 +95,8 @@ class Podcast:
 
 
 class Episode:
-    """
+    """Define `Episode` model.
+
     Contains data and methods to generate that data, about a single podcast episode
     """
 
@@ -113,7 +119,8 @@ class Episode:
                  entry: fp.FeedParserDict,
                  podcast_name: str,
                  podcast_url: str):
-        """
+        """`init` method.
+
         :param directory: download directory
         :param entry: single FeedParserDict from fp.parse(url).entries list
         :param podcast_name:
@@ -131,6 +138,7 @@ class Episode:
         self.filename = self._file_parser()
 
     def __repr__(self):
+        """`repr` method."""
         return f'{self.__class__.__name__}({self._dl_dir}, {self.entry}, ' \
                f'{self.podcast_name}, {self.podcast_url})'
 
@@ -138,7 +146,8 @@ class Episode:
         return f'{self.title}'
 
     def download(self) -> None:
-        """
+        """Download episode.
+
         Attempts to download episode
         :return: None
         """
@@ -167,7 +176,8 @@ class Episode:
             print(msg)
 
     def tag(self) -> None:
-        """
+        """Tag downloaded file with metadata.
+
         Uses mutagen's File class to try to discover what type of audio file
         is being tagged, then uses either mp3 or mp4 tagger on file, if type
         is either mp3 or mp4.  Otherwise, passes
@@ -189,7 +199,8 @@ class Episode:
             self._logger.exception(f'Unable to tag {self.filename}')
 
     def _image_url(self):
-        """
+        """Parse image url.
+
         Doing the error parsing here instead of just in a pair of nested .get().get() because
         this is both clearer and it doesn't matter at which level the dictionary lookup fails,
         any lookup failure means that there isn't an image url.
@@ -204,7 +215,8 @@ class Episode:
         return image
 
     def _audio_file_url(self) -> str:
-        """
+        """Parse audio file url.
+
         :return: link for episode's audio file URL.  Feed parser encloses file links in ...
         enclosures!  There might be a better way to parse this.
         """
@@ -215,7 +227,8 @@ class Episode:
         return url
 
     def _file_parser(self) -> path:
-        """
+        """Create absolute filename.
+
         :return: str, ex: path/to/podcast/directory/episode.m4a
         Defaults to .mp3 as that's the most common filetype.  It's a
         hack-y assumption, but it's the most common case (The other being a .mp4)
@@ -227,7 +240,8 @@ class Episode:
         return path.join(self._dl_dir, ''.join([self.title, '.mp3']))
 
     def _mp3_tagger(self) -> None:
-        """
+        """Tag mp3 files.
+
         Uses mutagen to write tags to mp3 file
         :return: None
         """
@@ -246,7 +260,8 @@ class Episode:
         self._logger.info(f'Tagged {self.filename}')
 
     def _mp4_tagger(self) -> None:
-        """
+        """Tag mp4 files.
+
         Uses mutagen to write tags to mp4 file
         :return: None
         """
