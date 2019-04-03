@@ -65,7 +65,7 @@ class TestDatabase(Setup):
                 self.assertEqual(name, columns[index])
         cursor.execute('SELECT * FROM settings WHERE id = 1')
         res = cursor.fetchone()
-        self.assertEqual(res, (1, HOME, False, '', '', ''))
+        self.assertEqual(res, (1, HOME, False, '', ''))
         conn.close()
 
     def test_add_podcast(self):
@@ -145,7 +145,6 @@ class TestDatabase(Setup):
         with Database(DATABASE) as db:
             sender, password, recipient = db.get_credentials()
         self.assertEqual(sender, '')
-        self.assertEqual(password, '')
         self.assertEqual(recipient, '')
         with Database(DATABASE) as db:
             db.change_option('sender_address', 'bob@loblaw.com')
