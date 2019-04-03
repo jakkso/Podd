@@ -3,20 +3,27 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from os import getenv, mkdir, path
+import pathlib
+
+from podd.settings import Config
 
 
-def logger(name, level=logging.DEBUG) -> logging.getLogger:
+def logger(name, log_directory=Config.log_directory, level=logging.DEBUG) -> logging.getLogger:
     """Create logger.
 
     :param name: name of logger
+    :param log_directory: directory in which to save logs
     :param level: logging level to use with this logger
     :return: logging.getLogger
     """
+    if not log_directory:
+        filename = logger_setup(name)
+    else:
+        filename = pathlib.Path(log_directory) / f'{name}.log'
     log = logging.getLogger(name)
     log.setLevel(level)
     fmt = logging.Formatter("%(asctime)s [%(filename)s] func: [%(funcName)s] [%(levelname)s] "
                             "line: [%(lineno)d] %(message)s")
-    filename = logger_setup(name)
     # delay=True delays opening file until actually needed, preventing I/O errors
     # That one was fun to figure out
     file_hdlr = RotatingFileHandler(filename=filename,

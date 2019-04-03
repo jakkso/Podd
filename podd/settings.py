@@ -11,8 +11,12 @@ class Config:
 
     By default, database file will be placed in the same directory as this file.
     Use absolute database locations to prevent pathing issues.
+
+    `log_directory` by default is `~/logs/Podd`.  If you specify another path, logs
+    will be placed in that directory
     """
     host = 'smtp.gmail.com'
     port = 587
     database = str(pathlib.Path(__file__).parent.joinpath('podcasts.db'))
     version = '0.1.12'
+    log_directory = None
