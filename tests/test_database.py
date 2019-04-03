@@ -55,7 +55,7 @@ class TestDatabase(Setup):
                            'feed_id',
                            'podcast_id']
             else:
-                columns = ['id', 'new_only',
+                columns = ['id',
                            'download_directory',
                            'notification_status',
                            'sender_address',
@@ -66,7 +66,7 @@ class TestDatabase(Setup):
                 self.assertEqual(name, columns[index])
         cursor.execute('SELECT * FROM settings WHERE id = 1')
         res = cursor.fetchone()
-        self.assertEqual(res, (1, 1, HOME, False, '', '', ''))
+        self.assertEqual(res, (1, HOME, False, '', '', ''))
         conn.close()
 
     def test_add_podcast(self):
@@ -112,15 +112,7 @@ class TestDatabase(Setup):
 
     def test_get_options(self):
         with Database(DATABASE) as db:
-            self.assertEqual((1, HOME, False, ''), db.get_options())
-
-    def test_set_options(self):
-        with Database(DATABASE) as db:
-            db.change_option('new_only', '0')
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute('SELECT new_only FROM main.settings WHERE id = 1')
-        self.assertEqual(0, cursor.fetchone()[0])
+            self.assertEqual((HOME, False, ''), db.get_options())
 
     def test_get_podcasts(self):
         url2 = 'google.com'
@@ -182,7 +174,6 @@ class TestFeed(Setup):
     def test_add_good_podcast(self, mock_method):
         mock_method.return_value = GOLD
         with Feed(DATABASE) as feed:
-            feed.change_option('new_only', 0)
             feed.add(GOLD_URL)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -195,8 +186,7 @@ class TestFeed(Setup):
     def test_add_podcast_with_single_episode(self, mock_method):
         mock_method.return_value = RYAN
         with Feed(DATABASE) as feed:
-            feed.change_option('new_only', 1)
-            feed.add(RYAN_URL)
+            feed.add(RYAN_URL, True)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM episodes')
@@ -229,8 +219,7 @@ class TestOptions(Setup):
 
     def test_print_options(self):
         with Options(DATABASE) as feed:
-            new_only, dl_dir, notify_status, recipient = feed.print_options()
-        self.assertEqual(new_only, 1)
+            dl_dir, notify_status, recipient = feed.print_options()
         self.assertEqual(dl_dir, HOME)
         self.assertEqual(notify_status, 0)
         self.assertEqual(recipient, '')
@@ -239,22 +228,6 @@ class TestOptions(Setup):
         with Options(DATABASE) as feed:
             self.assertTrue(feed.set_directory_option(str(pathlib.Path.home())))
             self.assertFalse(feed.set_directory_option('asdfa'))
-
-    def test_set_catalog_option(self):
-        with Options(DATABASE) as feed:
-            res = feed.set_catalog_option('new')
-        self.assertTrue(res)
-        with Options(DATABASE) as feed:
-            res = feed.set_catalog_option('asdfdd')
-        self.assertFalse(res)
-        with Options(DATABASE) as feed:
-            res = feed.set_catalog_option('all')
-        self.assertTrue(res)
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute('SELECT new_only FROM main.settings')
-        res = cursor.fetchone()[0]
-        self.assertEqual(res, 0)
 
 
 if __name__ == '__main__':

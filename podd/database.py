@@ -9,7 +9,7 @@ from types import TracebackType
 
 import feedparser as fp
 
-from podd.config import Config
+from podd.settings import Config
 from podd.utilities import logger
 
 
