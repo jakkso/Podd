@@ -42,7 +42,7 @@ def threaded_update(subscriptions: list) -> tuple:
         :return:
         """
         name, url, dl_dir = subscription
-        print(f'Updating {name}')
+        print(f'{name}...')
         with Podcast(url, dl_dir) as pod:
             j_packet = pod.episodes()
             if j_packet:

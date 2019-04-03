@@ -2,8 +2,8 @@
 
 import click
 
-from podd.config import Config
-from podd.database import Feed
+from podd.settings import Config
+from podd.database import Feed, Options
 from podd.downloader import downloader
 
 
@@ -62,6 +62,12 @@ def ls():
 
 
 @click.command()
+def email():
+    """Setup email notifications."""
+    Options().email_notification_setup()
+
+
+@click.command()
 def version():
     """Print version number."""
     click.echo(Config.version)
@@ -78,3 +84,4 @@ cli_group.add_command(add)
 cli_group.add_command(ls)
 cli_group.add_command(remove)
 cli_group.add_command(version)
+cli_group.add_command(email)

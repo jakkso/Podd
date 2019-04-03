@@ -59,7 +59,6 @@ class TestDatabase(Setup):
                            'download_directory',
                            'notification_status',
                            'sender_address',
-                           'sender_password',
                            'recipient_address']
             for index, column in enumerate(res):
                 name = column[1]

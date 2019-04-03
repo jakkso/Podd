@@ -3,4 +3,14 @@ click==6.7
 Jinja2==2.10
 MarkupSafe==1.0
 mutagen==1.39
-six==1.11.0
+asn1crypto==0.24.0
+cffi==1.12.2
+configparser==3.7.4
+cryptography==2.6.1
+entrypoints==0.3
+enum34==1.1.6
+ipaddress==1.0.22
+keyring==18.0.1
+pycparser==2.19
+SecretStorage==2.3.1
+six==1.12.0

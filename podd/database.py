@@ -8,6 +8,7 @@ import sqlite3
 from types import TracebackType
 
 import feedparser as fp
+import keyring
 
 from podd.settings import Config
 from podd.utilities import logger
@@ -127,12 +128,13 @@ class Database:
     def get_credentials(self) -> tuple:
         """Return credentials.
 
-        :return: tuple of sender_address, sender_password, and recipient_address
+        :return: tuple of sender_address, and recipient_address
         """
         self.cursor.execute('SELECT sender_address, '
-                            'sender_password, '
                             'recipient_address from settings where id = 1')
-        return self.cursor.fetchone()
+        sender, recipient = self.cursor.fetchone()
+        password = keyring.get_password('podd', sender)
+        return sender, password, recipient
 
     def change_option(self, option: str, value: str or int) -> None:
         """Save option changes to database.
@@ -273,7 +275,7 @@ class Options(Database):
             return
         sender, *_ = self.get_credentials()
         if sender == '' and value == 'on':
-            print('You need to enter a valid email address.  Run `python3 podd.py -e` first.')
+            print('You need to enter a valid email address.  Run `python3 podd.py email` first.')
             return
         self.change_option('notification_status', valid[value])
         msg = f'Notifications turned {value}.'
@@ -281,7 +283,8 @@ class Options(Database):
         self._logger.info(msg)
 
     def email_notification_setup(self, initial_setup: bool = False) -> None:
-        """
+        """Get and store email credentials.
+
        Interacts with user, gets sender email address and password, as well as recipient address
        :param initial_setup: bool if True, prints additional info
        :return: namedtuple of sender address and password and recipient address
@@ -335,8 +338,8 @@ class Options(Database):
             print(msg)
             print('\nNow enter the recipient email address.')
             recipient_address = input('Email address: ')
+            keyring.set_password('podd', sender_address, password)
             self.change_option('sender_address', sender_address)
-            self.change_option('sender_password', password)
             self.change_option('recipient_address', recipient_address)
             self.change_option('notification_status', True)
             msg = 'Email notification enabled!'
@@ -395,7 +398,7 @@ def create_database(database: str = Config.database) -> bool:
             exists = True
             break
     if not exists:
-        sender, password, recipient, notifications = '', '', '', False
+        sender, recipient, notifications = '', '', False
         with Database(database) as _db:
             cur = _db.cursor
             cur.execute('CREATE TABLE IF NOT EXISTS podcasts '
@@ -413,18 +416,15 @@ def create_database(database: str = Config.database) -> bool:
                         'download_directory TEXT,'
                         'notification_status BOOLEAN,'
                         'sender_address TEXT,'
-                        'sender_password TEXT,'
                         'recipient_address TEXT)')
             cur.execute('INSERT INTO settings ('
                         ' download_directory,'
                         ' notification_status,'
                         ' sender_address,'
-                        ' sender_password,'
-                        ' recipient_address) VALUES (?,?,?,?,?)',
+                        ' recipient_address) VALUES (?,?,?,?)',
                         (str(pathlib.Path.home().joinpath('Podcasts')),
                          notifications,
                          sender,
-                         password,
                          recipient))
         pathlib.Path(__file__).parent.joinpath('Logs').mkdir(exist_ok=True)
         return True

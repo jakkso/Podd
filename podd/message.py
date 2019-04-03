@@ -5,7 +5,7 @@ import smtplib
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from podd.config import Config
+from podd.settings import Config
 from podd.utilities import logger
 
 
