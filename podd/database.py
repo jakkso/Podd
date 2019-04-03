@@ -171,7 +171,7 @@ class Feed(Database):
                 # podcast_dir = path.join(dl_dir, podcast_name)
                 podcast_dir = pathlib.Path(dl_dir).joinpath(podcast_name)
                 podcast_dir.mkdir(parents=True, exist_ok=True)
-                self.add_podcast(name=podcast_name, url=feed.href, directory=podcast_dir)
+                self.add_podcast(name=podcast_name, url=feed.href, directory=str(podcast_dir))
                 # url=feed.href covers cases when rss feeds redirect to a diff URL.
                 # That was a fun one to debug.
                 if newest_only:
@@ -394,8 +394,12 @@ def create_database(database: str = Config.database) -> bool:
     :param database: string, abs path of database file
     :return: None
     """
-    files = pathlib.Path(database).parent.iterdir()
-    if database not in files:
+    exists = False
+    for file in pathlib.Path(database).parent.iterdir():
+        if database == str(file):
+            exists = True
+            break
+    if not exists:
         sender, password, recipient, notifications = '', '', '', False
         with Database(database) as _db:
             cur = _db.cursor

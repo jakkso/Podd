@@ -1,75 +1,80 @@
-"""
-Sets up CLI
-"""
+"""Implement CLI."""
 
-from argparse import ArgumentParser as Ag
+import click
 
 from podd.config import Config
-from podd.database import Feed, Options
+from podd.database import Feed
 from podd.downloader import downloader
 
 
-def cli() -> None:
+@click.group()
+def cli_group():
+    """Group cli commands"""
+    pass
+
+
+@click.command()
+def download():
+    """Download all new episodes."""
+    downloader()
+
+
+@click.command()
+@click.option(
+    "--catalog",
+    is_flag=True,
+    default=False,
+    help="Download all available episodes, rather than just the newest one.",
+)
+@click.option(
+    "--file",
+    is_flag=True,
+    default=False,
+    help="Specify that the input is a file of RSS feed URLs.",
+)
+@click.argument("feed")
+def add(feed: str, catalog: bool, file: bool):
+    """Add podcast subscription using supplied RSS feed URL.
+
+    If the --catalog flag is set, then all available episodes will be downloaded,
+    not just the newest episode.  The default behavior causes only the latest
+    episode to be downloaded.
+
+    If the --file flag is set, then you can supply a filename as the `feed` argument
+    to be able to add multiple podcasts at once.  Simply put each RSS feed URL on its
+    own line and Podd will attempt to add each URL.
+
     """
-    CLI implementation
-    :return: None
-    """
-    parser = parser_creator()
-    args = parser.parse_args()
-    if args.option:
-        Options().print_options()
-    elif args.catalog:
-        Options().set_catalog_option(args.catalog.lower())
-    elif args.base:
-        Options().set_directory_option(args.base)
-    elif args.add:
-        Feed().add(args.add)
-    elif args.ADD:
-        with open(args.ADD) as file:
-            with Feed() as feed:
-                for line in file:
-                    if line.strip != '':
-                        feed.add(line.strip())
-    elif args.list:
-        Feed().print_subscriptions()
-    elif args.remove:
-        Feed().remove()
-    elif args.download:
-        downloader()
-    elif args.email_notifications:
-        Options().email_notification_setup()
-    elif args.notifications:
-        Options().toggle_notifications(args.notifications.lower())
-    elif args.version:
-        print(Config.version)
+    if file:
+        with open(feed) as file:
+            urls = [l.strip() for l in file if l.strip()]
+        with Feed() as podcast:
+            for url in urls:
+                podcast.add(url, newest_only=not catalog)
     else:
-        parser.print_help()
+        Feed().add(feed, newest_only=not catalog)
 
 
-def parser_creator() -> Ag:
-    """
-    Sets up argument parser
-    :return: ArgumentParser
-    """
-    parser = Ag()
-    parser.add_argument('-d', '--download',
-                        help='Refreshes feeds and downloads all new episodes',
-                        action='store_true')
-    parser.add_argument('-l', '--list',
-                        help='Prints all current subscriptions',
-                        action='store_true')
-    parser.add_argument('-b', '--base',
-                        help='Sets the base download directory, absolute references only')
-    parser.add_argument('-a', '--add', help='Add single Feed to database')
-    parser.add_argument('-A', '--ADD', help='Add line separated file of feeds to database')
-    parser.add_argument('-o', '--option', help='Prints currently set options', action='store_true')
-    parser.add_argument('-r', '--remove', help='Deletion menu', action='store_true')
-    parser.add_argument('-e', '--email_notifications', action='store_true',
-                        help='Setup email notifications')
-    parser.add_argument('-n', '--notifications',
-                        help='Turns email notifications on and off.'
-                             '  Valid options: `on` or `off`.')
-    parser.add_argument('-v', '--version',
-                        help='Prints program version',
-                        action='store_true')
-    return parser
+@click.command()
+def ls():
+    """Print current subscriptions."""
+    Feed().print_subscriptions()
+
+
+@click.command()
+def version():
+    """Print version number."""
+    click.echo(Config.version)
+
+
+@click.command()
+def remove():
+    """Interactive subscription deletion menu."""
+    Feed().remove()
+
+
+cli_group.add_command(download)
+cli_group.add_command(add)
+cli_group.add_command(ls)
+cli_group.add_command(remove)
+cli_group.add_command(version)

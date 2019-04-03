@@ -1,4 +1,5 @@
 feedparser==5.2.1
+click==6.7
 Jinja2==2.10
 MarkupSafe==1.0
 mutagen==1.39
