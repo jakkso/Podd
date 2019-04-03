@@ -30,7 +30,8 @@ In your terminal of choice, enter `python3 podd.py` followed by one of the follo
 | `--help` | Print help menu |
 | `version` | Prints version number |
 | `download` | Run download routine |
-| `ls` | Print list of episodes |
+| `email` | Run email credential storage routine.  Password is stored in OS keyring.|
+| `ls` | Print list of subscriptions |
 | `add [--all] [--file] $FEED` | Subscribe to podcast with an rss feed url.  If `--all` is  specified, then all available episodes will be downloaded when `download` command is run.  If `--file` is set, `$FEED` will be treated as a file with a single RSS feed URL per line and `podd` will attempt to add each line as a separate RSS feed URL.|
 | `remove` | Display the deletion menu |
 
