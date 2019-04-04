@@ -8,7 +8,9 @@ with open('README.md') as file:
 requirements = [
     'feedparser',
     'jinja2',
-    'mutagen'
+    'mutagen',
+    'click',
+    'keyring'
 ]
 
 setuptools.setup(
