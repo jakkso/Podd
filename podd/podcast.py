@@ -86,7 +86,7 @@ class Podcast:
                                     self._name,
                                     self._url)
                             for entry in self._new_episodes]
-            self._logger.debug(f'{len(episode_list)} new episodes of {self._name}')
+            self._logger.debug(f'{len(episode_list)} new episode(s) of {self._name}')
             return self.JinjaPacket(self._name,
                                     self._image,
                                     episode_list)
@@ -100,7 +100,7 @@ class Episode:
     Contains data and methods to generate that data, about a single podcast episode
     """
 
-    types = ('.mp3', '.m4a', '.wav', '.mp4', '.m4v', '.mov', '.avi', '.wmv')
+    types = ('.mp3', '.m4a', '.aif')
 
     __slots__ = ['_dl_dir',
                  'entry',
@@ -198,9 +198,7 @@ class Episode:
                 self._mp4_tagger()
             else:
                 self._logger.warning(f'Unable to determine filetype for {self.filename}, cannot tag')
-        except AttributeError:
-            self._logger.exception(f'Unable to tag {self.filename}')
-        except mutagen.MutagenError:
+        except (AttributeError, mutagen.MutagenError):
             self._logger.exception(f'Unable to tag {self.filename}')
 
     def _image_url(self):
@@ -222,26 +220,28 @@ class Episode:
     def _audio_file_url(self) -> str:
         """Parse audio file url.
 
-        :return: link for episode's audio file URL.  Feed parser encloses file links in ...
-        enclosures!  There might be a better way to parse this.
+        :return: link for episode's audio file URL.
         """
         url = None
         for link in self.entry.links:
-            if link.rel == 'enclosure':
+            if 'audio/' in link.type:
                 url = link.href
+                break
         return url
 
     def _file_parser(self) -> path:
         """Create absolute filename.
 
         :return: str, ex: path/to/podcast/directory/episode.m4a
-        Defaults to .mp3 as that's the most common filetype.  It's a
-        hack-y assumption, but it's the most common case (The other being a .mp4)
+        Defaults to .mp3 as that's the most common filetype.
+
+        Recently (As of 04/10/19), of the iTunes top 100 podcasts, 11784/11797, or around 99.89%, of
+        all episodes were mp3s.
         """
         for ext in self.types:
-            if ext in self.url:
+            if ext in self.url.lower():  # Edge case where extension is capitalized
                 return path.join(self._dl_dir, ''.join([self.title, ext]))
-        self._logger.warning(f'Unable to determine extension for {self.url}')
+        self._logger.warning(f'Unable to determine extension for {self.url}, defaulting to `.mp3`')
         return path.join(self._dl_dir, ''.join([self.title, '.mp3']))
 
     def _mp3_tagger(self) -> None:
