@@ -50,7 +50,7 @@ def add(feed: str, catalog: bool, file: bool):
 
 
 @click.command()
-@click.argument('directory')
+@click.argument("directory")
 def directory(directory: str):
     """Set download directory."""
     Options().set_directory_option(directory)

@@ -21,11 +21,13 @@ def downloader() -> None:
     if podcasts and eps_to_download:
         threaded_downloader(eps_to_download)
         if send_notifications:
-            message_packet = [p.good_episodes for p in podcasts if p.good_episodes is not None]
+            message_packet = [
+                p.good_episodes for p in podcasts if p.good_episodes is not None
+            ]
             if message_packet:
                 Message(message_packet, sender, password, recipient).send()
     else:
-        print('No new episodes')
+        print("No new episodes")
 
 
 def threaded_update(subscriptions: list) -> tuple:
@@ -44,7 +46,7 @@ def threaded_update(subscriptions: list) -> tuple:
         :return:
         """
         name, url, dl_dir = subscription
-        print(f'{name}...')
+        print(f"{name}...")
         with Podcast(url, dl_dir) as pod:
             if pod.episodes:
                 return pod
@@ -67,6 +69,7 @@ def threaded_downloader(eps_to_download: List[Episode]) -> None:
     :param eps_to_download: list of Episodes to be downloaded
     :return: None
     """
+
     def download_worker(episode: Episode) -> Episode:
         """Download and tag episode.
 
@@ -74,7 +77,7 @@ def threaded_downloader(eps_to_download: List[Episode]) -> None:
         :param: episode Episode obj
         :return: Noned
         """
-        print(f'Downloading {episode.podcast_name} - {episode.title}')
+        print(f"Downloading {episode.podcast_name} - {episode.title}")
         episode.download()
         episode.tag()
         if not episode.error:
@@ -88,5 +91,4 @@ def threaded_downloader(eps_to_download: List[Episode]) -> None:
         with Database() as _db:
             for epi in results:
                 if epi:
-                    _db.add_episode(podcast_url=epi.podcast_url,
-                                    feed_id=epi.entry.id)
+                    _db.add_episode(podcast_url=epi.podcast_url, feed_id=epi.entry.id)

@@ -14,5 +14,5 @@ def podd():
     cli_group()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     podd()

@@ -8,7 +8,9 @@ import pathlib
 from podd.settings import Config
 
 
-def logger(name, log_directory=Config.log_directory, level=logging.DEBUG) -> logging.getLogger:
+def logger(
+    name, log_directory=Config.log_directory, level=logging.DEBUG
+) -> logging.getLogger:
     """Create logger.
 
     :param name: name of logger
@@ -19,17 +21,18 @@ def logger(name, log_directory=Config.log_directory, level=logging.DEBUG) -> log
     if not log_directory:
         filename = logger_setup(name)
     else:
-        filename = pathlib.Path(log_directory) / f'{name}.log'
+        filename = pathlib.Path(log_directory) / f"{name}.log"
     log = logging.getLogger(name)
     log.setLevel(level)
-    fmt = logging.Formatter("%(asctime)s [%(filename)s] func: [%(funcName)s] [%(levelname)s] "
-                            "line: [%(lineno)d] %(message)s")
+    fmt = logging.Formatter(
+        "%(asctime)s [%(filename)s] func: [%(funcName)s] [%(levelname)s] "
+        "line: [%(lineno)d] %(message)s"
+    )
     # delay=True delays opening file until actually needed, preventing I/O errors
     # That one was fun to figure out
-    file_hdlr = RotatingFileHandler(filename=filename,
-                                    delay=True,
-                                    backupCount=5,
-                                    maxBytes=2000000)
+    file_hdlr = RotatingFileHandler(
+        filename=filename, delay=True, backupCount=5, maxBytes=2000000
+    )
     file_hdlr.setLevel(level)
     file_hdlr.setFormatter(fmt)
     if not log.handlers:
@@ -48,12 +51,12 @@ def logger_setup(name: str) -> str:
 
     :return: name of log file
     """
-    home = getenv('HOME')
-    log_dir = path.join(home, 'logs')
-    podd_dir = path.join(log_dir, 'Podd')
+    home = getenv("HOME")
+    log_dir = path.join(home, "logs")
+    podd_dir = path.join(log_dir, "Podd")
     if not path.exists(log_dir):
         mkdir(log_dir)
     if not path.exists(podd_dir):
         mkdir(podd_dir)
-    log_file = path.join(podd_dir, f'{name}.log')
+    log_file = path.join(podd_dir, f"{name}.log")
     return log_file

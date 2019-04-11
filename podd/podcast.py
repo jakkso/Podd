@@ -4,7 +4,6 @@ from http import client
 from os import path
 from ssl import CertificateError
 import typing
-from urllib.request import urlretrieve
 from urllib.error import HTTPError, URLError
 
 import feedparser as fp
@@ -12,6 +11,7 @@ import mutagen
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3NoHeaderError
 from mutagen.mp4 import MP4
+from requests import get
 
 from podd.database import Database
 from podd.utilities import logger
@@ -30,13 +30,9 @@ class Podcast:
     hence the name.
     """
 
-    __slots__ = ['_url',
-                 '_dl_dir',
-                 '_logger',
-                 '_name',
-                 '_image',
-                 '_new_entries',
-                 'episodes']
+    __slots__ = [
+        "_url", "_dl_dir", "_logger", "_name", "_image", "_new_entries", "episodes"
+    ]
 
     def __init__(self, url: str, directory: str):
         """init method.
@@ -46,15 +42,15 @@ class Podcast:
         """
         self._url = url
         self._dl_dir = directory
-        self._logger = logger('podcast')
+        self._logger = logger("podcast")
         self.episodes: typing.List[Episode] = []
         _old_eps = Database().get_episodes(self._url)
         _feed: fp.FeedParserDict = fp.parse(self._url)
-        self._name = _feed.feed.get('title', default=self._url)
+        self._name = _feed.feed.get("title", default=self._url)
         try:
             self._image = _feed.feed.image.href
         except (KeyError, AttributeError):
-            self._logger.exception(f'No image for {self._url}')
+            self._logger.exception(f"No image for {self._url}")
             self._image = None
         self._new_entries = [item for item in _feed.entries if item.id not in _old_eps]
         self._episode_parser()
@@ -70,28 +66,25 @@ class Podcast:
 
     def __repr__(self):
         """`repr` method."""
-        return f'{self.__class__.__name__}({self._url}, {self._dl_dir}'
+        return f"{self.__class__.__name__}({self._url}, {self._dl_dir}"
 
     def __str__(self):
         """`str` method."""
-        return f'{self._name}'
+        return f"{self._name}"
 
     def _episode_parser(self) -> None:
         """Create Episodes from feedparser entries."""
         if self._new_entries:
             self.episodes = [
-                Episode(
-                    self._dl_dir,
-                    entry,
-                    self._name,
-                    self._url
-                )
+                Episode(self._dl_dir, entry, self._name, self._url)
                 for entry in self._new_entries
             ]
-            plural = '' if len(self.episodes) == 1 else 's'
-            self._logger.debug(f'{len(self.episodes)} new episode{plural} of {self._name}')
+            plural = "" if len(self.episodes) == 1 else "s"
+            self._logger.debug(
+                f"{len(self.episodes)} new episode{plural} of {self._name}"
+            )
         else:
-            self._logger.debug(f'No episodes for {self._name}')
+            self._logger.debug(f"No episodes for {self._name}")
 
     @property
     def good_episodes(self):
@@ -111,25 +104,29 @@ class Episode:
     Contains data and methods to generate that data, about a single podcast episode
     """
 
-    types = ('.mp3', '.m4a', '.aif')
+    types = (".mp3", ".m4a", ".aif")
 
-    __slots__ = ['_dl_dir',
-                 'entry',
-                 'podcast_name',
-                 '_logger',
-                 'podcast_url',
-                 'title',
-                 'summary',
-                 'image',
-                 'url',
-                 'filename',
-                 'error']
+    __slots__ = [
+        "_dl_dir",
+        "entry",
+        "podcast_name",
+        "_logger",
+        "podcast_url",
+        "title",
+        "summary",
+        "image",
+        "url",
+        "filename",
+        "error",
+    ]
 
-    def __init__(self,
-                 directory: str,
-                 entry: fp.FeedParserDict,
-                 podcast_name: str,
-                 podcast_url: str):
+    def __init__(
+        self,
+        directory: str,
+        entry: fp.FeedParserDict,
+        podcast_name: str,
+        podcast_url: str,
+    ):
         """`init` method.
 
         :param directory: download directory
@@ -140,21 +137,22 @@ class Episode:
         self.error: bool = None
         self.entry = entry
         self.podcast_name = podcast_name
-        self._logger = logger('episode')
+        self._logger = logger("episode")
         self.podcast_url = podcast_url
-        self.title = self.entry.get('title', 'No title available.').replace('/', '-')  # '/' screws up filenames
-        self.summary = self.entry.get('summary', 'No summary available.')
+        self.title = self.entry.get("title", "No title available.").replace(
+            "/", "-"
+        )  # '/' screws up filenames
+        self.summary = self.entry.get("summary", "No summary available.")
         self.image = self._image_url()
         self.url = self._audio_file_url()
         self.filename = self._file_parser()
 
     def __repr__(self):
         """`repr` method."""
-        return f'{self.__class__.__name__}({self._dl_dir}, {self.entry}, ' \
-               f'{self.podcast_name}, {self.podcast_url})'
+        return f"{self.__class__.__name__}({self._dl_dir}, {self.entry}, " f"{self.podcast_name}, {self.podcast_url})"
 
     def __str__(self):
-        return f'{self.title}'
+        return f"{self.title}"
 
     def download(self) -> None:
         """Download episode.
@@ -163,30 +161,34 @@ class Episode:
         :return: None
         """
         try:
-            urlretrieve(self.url, filename=self.filename)
-            self._logger.info(f'Downloaded {self.filename}')
+            resp = get(self.url, stream=True)
+            if resp.ok:
+                with open(self.filename, "wb") as file:
+                    for chunk in resp:
+                        file.write(chunk)
+            self._logger.info(f"Downloaded {self.filename}")
         except ConnectionRefusedError:
-            msg = f'Connection refused error: {self.url}'
+            msg = f"Connection refused error: {self.url}"
             self._logger.error(msg)
             self.error = True
             print(msg)
         except FileNotFoundError:
-            msg = f'Unable to open file or directory at {self.filename}.'
+            msg = f"Unable to open file or directory at {self.filename}."
             self._logger.exception(msg)
             self.error = True
             print(msg)
         except HTTPError:
-            msg = f'Connection error URL: {self.url}.'
+            msg = f"Connection error URL: {self.url}."
             self._logger.exception(msg)
             self.error = True
             print(msg)
         except URLError as error:
-            msg = f'Connection error {error} URL: {self.url} Filename: {self.filename}.'
+            msg = f"Connection error {error} URL: {self.url} Filename: {self.filename}."
             self._logger.exception(msg)
             self.error = True
             print(msg)
         except CertificateError as error:
-            msg = f'Certificate error {error} URL: {self.url} Filename: {self.filename}'
+            msg = f"Certificate error {error} URL: {self.url} Filename: {self.filename}"
             self._logger.exception(msg)
             self.error = True
             print(msg)
@@ -203,14 +205,16 @@ class Episode:
             return
         try:
             filetype = mutagen.File(self.filename).pprint()
-            if 'mp3' in filetype:
+            if "mp3" in filetype:
                 self._mp3_tagger()
-            elif 'mp4' in filetype:
+            elif "mp4" in filetype:
                 self._mp4_tagger()
             else:
-                self._logger.warning(f'Unable to determine filetype for {self.filename}, cannot tag')
+                self._logger.warning(
+                    f"Unable to determine filetype for {self.filename}, cannot tag"
+                )
         except (AttributeError, mutagen.MutagenError):
-            self._logger.exception(f'Unable to tag {self.filename}')
+            self._logger.exception(f"Unable to tag {self.filename}")
 
     def _image_url(self):
         """Parse image url.
@@ -224,8 +228,9 @@ class Episode:
             image = self.entry.image.href
         except AttributeError:
             image = None
-            self._logger.info(f'No image found for {self.podcast_name}'
-                              f' episode {self.title})')
+            self._logger.info(
+                f"No image found for {self.podcast_name}" f" episode {self.title})"
+            )
         return image
 
     def _audio_file_url(self) -> str:
@@ -235,7 +240,7 @@ class Episode:
         """
         url = None
         for link in self.entry.links:
-            if 'audio/' in link.type:
+            if "audio/" in link.type:
                 url = link.href
                 break
         return url
@@ -251,9 +256,11 @@ class Episode:
         """
         for ext in self.types:
             if ext in self.url.lower():  # Edge case where extension is capitalized
-                return path.join(self._dl_dir, ''.join([self.title, ext]))
-        self._logger.warning(f'Unable to determine extension for {self.url}, defaulting to `.mp3`')
-        return path.join(self._dl_dir, ''.join([self.title, '.mp3']))
+                return path.join(self._dl_dir, "".join([self.title, ext]))
+        self._logger.warning(
+            f"Unable to determine extension for {self.url}, defaulting to `.mp3`"
+        )
+        return path.join(self._dl_dir, "".join([self.title, ".mp3"]))
 
     def _mp3_tagger(self) -> None:
         """Tag mp3 files.
@@ -264,16 +271,16 @@ class Episode:
         try:
             tag = EasyID3(self.filename)
         except ID3NoHeaderError:
-            self._logger.info(f'Adding header to {self.filename}')
+            self._logger.info(f"Adding header to {self.filename}")
             tag = mutagen.File(self.filename, easy=True)
             tag.add_tags()
-        tag[u'title'] = self.title
-        tag[u'artist'] = self.podcast_name
-        tag[u'album'] = self.podcast_name
-        tag[u'albumartist'] = self.podcast_name
-        tag[u'genre'] = 'Podcast'
+        tag[u"title"] = self.title
+        tag[u"artist"] = self.podcast_name
+        tag[u"album"] = self.podcast_name
+        tag[u"albumartist"] = self.podcast_name
+        tag[u"genre"] = "Podcast"
         tag.save(self.filename)
-        self._logger.info(f'Tagged {self.filename}')
+        self._logger.info(f"Tagged {self.filename}")
 
     def _mp4_tagger(self) -> None:
         """Tag mp4 files.
@@ -282,10 +289,10 @@ class Episode:
         :return: None
         """
         tag = mutagen.mp4.MP4(self.filename).tags
-        tag['\xa9nam'] = self.title
-        tag['\xa9ART'] = self.podcast_name  # Artist
-        tag['\xa9alb'] = self.podcast_name  # Album
-        tag['aART'] = self.podcast_name  # Album artist
-        tag['\xa9gen'] = 'Podcast'  # Genre
+        tag["\xa9nam"] = self.title
+        tag["\xa9ART"] = self.podcast_name  # Artist
+        tag["\xa9alb"] = self.podcast_name  # Album
+        tag["aART"] = self.podcast_name  # Album artist
+        tag["\xa9gen"] = "Podcast"  # Genre
         tag.save(self.filename)
-        self._logger.info(f'Tagged {self.filename}')
+        self._logger.info(f"Tagged {self.filename}")

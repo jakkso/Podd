@@ -3,10 +3,10 @@ Good Morning,
 These podcast episodes were downloaded:
 
 {% for podcast in podcasts %}
-    ~~{{ podcast.name }}~~
-    {% for episode in podcast.episodes %}
+    ~~{{ podcast[0] }}~~
+    {% for episode in podcast[2] %}
         * {{ episode.title }}
     {% endfor %}
 {% endfor %}
 
-Have a great day!
+Happy Listening!

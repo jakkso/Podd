@@ -5,7 +5,7 @@ from podd.settings import Config
 with open("README.md") as file:
     long_description = file.read()
 
-requirements = ["feedparser", "jinja2", "mutagen", "click", "keyring"]
+requirements = ["feedparser", "jinja2", "mutagen", "click", "keyring", "requests"]
 
 setuptools.setup(
     name="Podd",

@@ -1,5 +1,7 @@
 # Podd: a CLI podcatcher
 
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+
 If you're anything like me, you listen to a lot of podcasts.  I like to archive all of my favorites on my home server, 
 where I serve them to all my various devices via Plex.  I looked around for a podcatcher that would manage my podcasts 
 and could be run as a cron job, but I didn't find anything that really met my needs.  So I decided to write my own.

@@ -1,9 +1,9 @@
 <div class="panel panel-primary">
     <div class="panel-heading">
-        <h3 class="panel-title"><img style="width: 150px; display: inline-block; margin-right: 10px;" src="{{ podcast.image }}">{{ podcast.name }}</h3>
+        <h3 class="panel-title"><img style="width: 150px; display: inline-block; margin-right: 10px;" src="{{ podcast[1] }}">{{ podcast[0] }}</h3>
     </div>
     <div class="panel-body">
-        {% for episode in podcast.episodes %}
+        {% for episode in podcast[2] %}
             <div class="panel panel-primary">
                 <div class="panel-heading">
                     <h3 class="panel-title">{{ episode.title }}</h3>
