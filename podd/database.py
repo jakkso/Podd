@@ -1,7 +1,6 @@
 """Define the database API."""
 
 import getpass
-from os import access, R_OK, W_OK
 import pathlib
 import smtplib
 import sqlite3
@@ -372,13 +371,16 @@ class Options(Database):
         :param directory: string, abs path to base download directory
         :return: None
         """
-        if access(directory, W_OK) and access(directory, R_OK):
+        try:
+            pathlib.Path(directory).mkdir(exist_ok=True, parents=True)
             self.change_option('download_directory', directory)
             msg = f'Changed download directory to {directory}'
             print(msg)
             self._logger.info(msg)
             return True
-        msg = f'Invalid directory: {directory}'
+        except PermissionError:
+            pass
+        msg = f'Unable to create download directory `{directory}`'
         print(msg)
         self._logger.warning(msg)
         return False

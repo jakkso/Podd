@@ -14,12 +14,6 @@ def cli_group():
 
 
 @click.command()
-def download():
-    """Download all new episodes."""
-    downloader()
-
-
-@click.command()
 @click.option(
     "--catalog",
     is_flag=True,
@@ -56,9 +50,16 @@ def add(feed: str, catalog: bool, file: bool):
 
 
 @click.command()
-def ls():
-    """Print current subscriptions."""
-    Feed().print_subscriptions()
+@click.argument('directory')
+def directory(directory: str):
+    """Set download directory."""
+    Options().set_directory_option(directory)
+
+
+@click.command()
+def download():
+    """Download all new episodes."""
+    downloader()
 
 
 @click.command()
@@ -68,9 +69,15 @@ def email():
 
 
 @click.command()
-def version():
-    """Print version number."""
-    click.echo(Config.version)
+def ls():
+    """Print current subscriptions."""
+    Feed().print_subscriptions()
+
+
+@click.command()
+def options():
+    """Print currently set options."""
+    Options().print_options()
 
 
 @click.command()
@@ -79,9 +86,17 @@ def remove():
     Feed().remove()
 
 
-cli_group.add_command(download)
+@click.command()
+def version():
+    """Print version number."""
+    click.echo(Config.version)
+
+
 cli_group.add_command(add)
+cli_group.add_command(directory)
+cli_group.add_command(download)
+cli_group.add_command(email)
 cli_group.add_command(ls)
+cli_group.add_command(options)
 cli_group.add_command(remove)
 cli_group.add_command(version)
-cli_group.add_command(email)
