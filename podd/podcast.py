@@ -1,9 +1,9 @@
 """Define podcast & episode objects."""
 
-from collections import namedtuple
-from os import path
 from http import client
+from os import path
 from ssl import CertificateError
+import typing
 from urllib.request import urlretrieve
 from urllib.error import HTTPError, URLError
 
@@ -30,14 +30,13 @@ class Podcast:
     hence the name.
     """
 
-    JinjaPacket = namedtuple('JinjaPacket', 'name image episodes')
-
     __slots__ = ['_url',
                  '_dl_dir',
                  '_logger',
                  '_name',
                  '_image',
-                 '_new_episodes']
+                 '_new_entries',
+                 'episodes']
 
     def __init__(self, url: str, directory: str):
         """init method.
@@ -48,6 +47,7 @@ class Podcast:
         self._url = url
         self._dl_dir = directory
         self._logger = logger('podcast')
+        self.episodes: typing.List[Episode] = []
         _old_eps = Database().get_episodes(self._url)
         _feed: fp.FeedParserDict = fp.parse(self._url)
         self._name = _feed.feed.get('title', default=self._url)
@@ -56,7 +56,8 @@ class Podcast:
         except (KeyError, AttributeError):
             self._logger.exception(f'No image for {self._url}')
             self._image = None
-        self._new_episodes = [item for item in _feed.entries if item.id not in _old_eps]
+        self._new_entries = [item for item in _feed.entries if item.id not in _old_eps]
+        self._episode_parser()
 
     def __enter__(self):
         """Context method."""
@@ -75,23 +76,33 @@ class Podcast:
         """`str` method."""
         return f'{self._name}'
 
-    def episodes(self) -> JinjaPacket or False:
-        """Return episodes to be downloaded.
+    def _episode_parser(self) -> None:
+        """Create Episodes from feedparser entries."""
+        if self._new_entries:
+            self.episodes = [
+                Episode(
+                    self._dl_dir,
+                    entry,
+                    self._name,
+                    self._url
+                )
+                for entry in self._new_entries
+            ]
+            plural = '' if len(self.episodes) == 1 else 's'
+            self._logger.debug(f'{len(self.episodes)} new episode{plural} of {self._name}')
+        else:
+            self._logger.debug(f'No episodes for {self._name}')
 
-        :return: JinjaPacket if episodes need to be downloaded, False otherwise
-        """
-        if self._new_episodes:
-            episode_list = [Episode(self._dl_dir,
-                                    entry,
-                                    self._name,
-                                    self._url)
-                            for entry in self._new_episodes]
-            self._logger.debug(f'{len(episode_list)} new episode(s) of {self._name}')
-            return self.JinjaPacket(self._name,
-                                    self._image,
-                                    episode_list)
-        self._logger.debug(f'No episodes for {self._name}')
-        return False
+    @property
+    def good_episodes(self):
+        """Obtain which episodes were successfully downloaded."""
+        one_good = False
+        for episode in self.episodes:
+            if not episode.error:
+                one_good = True
+                break
+        if one_good:
+            return self._name, self._image, [ep for ep in self.episodes if not ep.error]
 
 
 class Episode:
@@ -274,7 +285,7 @@ class Episode:
         tag['\xa9nam'] = self.title
         tag['\xa9ART'] = self.podcast_name  # Artist
         tag['\xa9alb'] = self.podcast_name  # Album
-        tag['aART'] = self.podcast_name # Album artist
+        tag['aART'] = self.podcast_name  # Album artist
         tag['\xa9gen'] = 'Podcast'  # Genre
         tag.save(self.filename)
         self._logger.info(f'Tagged {self.filename}')

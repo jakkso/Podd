@@ -17,11 +17,13 @@ def downloader() -> None:
     with Database() as _db:
         _, send_notifications, _ = _db.get_options()
         sender, password, recipient = _db.get_credentials()
-        jinja_packets, eps_to_download = threaded_update(_db.get_podcasts())
-    if jinja_packets and eps_to_download:
+        podcasts, eps_to_download = threaded_update(_db.get_podcasts())
+    if podcasts and eps_to_download:
         threaded_downloader(eps_to_download)
         if send_notifications:
-            Message(jinja_packets, sender, password, recipient).send()
+            message_packet = [p.good_episodes for p in podcasts if p.good_episodes is not None]
+            if message_packet:
+                Message(message_packet, sender, password, recipient).send()
     else:
         print('No new episodes')
 
@@ -34,7 +36,7 @@ def threaded_update(subscriptions: list) -> tuple:
     :return: 2-tuple of lists of jinja_packets and a list of episodes to download.
     """
 
-    def update_worker(subscription: tuple) -> tuple or None:
+    def update_worker(subscription: tuple) -> Podcast or None:
         """Get update for single podcast.
 
         Function used by ThreadPool to update RSS feed.
@@ -44,21 +46,19 @@ def threaded_update(subscriptions: list) -> tuple:
         name, url, dl_dir = subscription
         print(f'{name}...')
         with Podcast(url, dl_dir) as pod:
-            j_packet = pod.episodes()
-            if j_packet:
-                return j_packet, j_packet.episodes
-        return False
+            if pod.episodes:
+                return pod
 
-    jinja_packets, to_dl = [], []
+    podcasts, episodes = [], []
     pool = ThreadPool(3)
     results = pool.map(update_worker, subscriptions)
     pool.close()
     pool.join()
-    for item in results:
-        if item:
-            jinja_packets.append(item[0])
-            to_dl.extend(item[1])
-    return jinja_packets, to_dl
+    for podcast in results:
+        if podcast:
+            podcasts.append(podcast)
+            episodes.extend(podcast.episodes)
+    return podcasts, episodes
 
 
 def threaded_downloader(eps_to_download: List[Episode]) -> None:
