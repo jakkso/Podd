@@ -18,5 +18,5 @@ class Config:
     host = "smtp.gmail.com"
     port = 587
     database = str(pathlib.Path(__file__).parent.joinpath("podcasts.db"))
-    version = "0.1.14"
+    version = "0.1.15"
     log_directory = None
