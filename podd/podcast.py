@@ -12,6 +12,7 @@ from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3NoHeaderError
 from mutagen.mp4 import MP4
 from requests import get
+from requests.exceptions import ConnectionError
 
 from podd.database import Database
 from podd.utilities import logger
@@ -167,28 +168,13 @@ class Episode:
                     for chunk in resp:
                         file.write(chunk)
             self._logger.info(f"Downloaded {self.filename}")
-        except ConnectionRefusedError:
-            msg = f"Connection refused error: {self.url}"
-            self._logger.error(msg)
-            self.error = True
-            print(msg)
         except FileNotFoundError:
             msg = f"Unable to open file or directory at {self.filename}."
             self._logger.exception(msg)
             self.error = True
             print(msg)
-        except HTTPError:
-            msg = f"Connection error URL: {self.url}."
-            self._logger.exception(msg)
-            self.error = True
-            print(msg)
-        except URLError as error:
-            msg = f"Connection error {error} URL: {self.url} Filename: {self.filename}."
-            self._logger.exception(msg)
-            self.error = True
-            print(msg)
-        except CertificateError as error:
-            msg = f"Certificate error {error} URL: {self.url} Filename: {self.filename}"
+        except (ConnectionRefusedError, HTTPError, URLError, CertificateError, ConnectionError) as error:
+            msg = f"Error {error} URL: {self.url} Filename: {self.filename}"
             self._logger.exception(msg)
             self.error = True
             print(msg)
