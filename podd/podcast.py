@@ -43,7 +43,7 @@ class Podcast:
         """
         self._url = url
         self._dl_dir = directory
-        self._logger = logger("podcast")
+        self._logger = logger(f"{self.__class__.__name__}")
         self.episodes: typing.List[Episode] = []
         _old_eps = Database().get_episodes(self._url)
         _feed: fp.FeedParserDict = fp.parse(self._url)
@@ -138,7 +138,7 @@ class Episode:
         self.error: bool = None
         self.entry = entry
         self.podcast_name = podcast_name
-        self._logger = logger("episode")
+        self._logger = logger(f"{self.__class__.__name__}")
         self.podcast_url = podcast_url
         self.title = self.entry.get("title", "No title available.").replace(
             "/", "-"

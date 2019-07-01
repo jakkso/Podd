@@ -33,7 +33,7 @@ class Message:
         self.sender = sender
         self.password = password
         self.recipient = recipient
-        self.logger = logger("message")
+        self.logger = logger(f"{self.__class__.__name__}")
         self.podcasts = podcasts
         self.text = self.render_text()
         self.html = self.render_html()
