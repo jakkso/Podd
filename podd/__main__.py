@@ -4,13 +4,12 @@ Essentially, this is the launch script.
 """
 
 from podd.cli import cli_group
-from podd.database import Options, create_database
+from podd.utilities import bootstrap_app
 
 
 def podd():
     """Create main routine."""
-    if create_database():
-        Options().email_notification_setup(initial_setup=True)
+    bootstrap_app()
     cli_group()
 
 

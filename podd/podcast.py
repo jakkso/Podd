@@ -15,7 +15,7 @@ from requests import get
 from requests.exceptions import ConnectionError
 
 from podd.database import Database
-from podd.utilities import logger
+from podd.logger import logger
 
 # Some podcast feeds send a silly amount of headers, crashing downloader func. Default is 100
 client._MAXHEADERS = 1000
@@ -32,7 +32,13 @@ class Podcast:
     """
 
     __slots__ = [
-        "_url", "_dl_dir", "_logger", "_name", "_image", "_new_entries", "episodes"
+        "_url",
+        "_dl_dir",
+        "_logger",
+        "_name",
+        "_image",
+        "_new_entries",
+        "episodes",
     ]
 
     def __init__(self, url: str, directory: str):
@@ -71,7 +77,7 @@ class Podcast:
 
     def __str__(self):
         """`str` method."""
-        return f"{self._name}"
+        return f"<Podcast {self._name}>"
 
     def _episode_parser(self) -> None:
         """Create Episodes from feedparser entries."""
@@ -150,10 +156,13 @@ class Episode:
 
     def __repr__(self):
         """`repr` method."""
-        return f"{self.__class__.__name__}({self._dl_dir}, {self.entry}, " f"{self.podcast_name}, {self.podcast_url})"
+        return (
+            f"{self.__class__.__name__}({self._dl_dir}, {self.entry}, "
+            f"{self.podcast_name}, {self.podcast_url})"
+        )
 
     def __str__(self):
-        return f"{self.title}"
+        return f"<Episode {self.title}>"
 
     def download(self) -> None:
         """Download episode.
@@ -173,7 +182,13 @@ class Episode:
             self._logger.exception(msg)
             self.error = True
             print(msg)
-        except (ConnectionRefusedError, HTTPError, URLError, CertificateError, ConnectionError) as error:
+        except (
+            ConnectionRefusedError,
+            HTTPError,
+            URLError,
+            CertificateError,
+            ConnectionError,
+        ) as error:
             msg = f"Error {error} URL: {self.url} Filename: {self.filename}"
             self._logger.exception(msg)
             self.error = True
@@ -260,11 +275,11 @@ class Episode:
             self._logger.info(f"Adding header to {self.filename}")
             tag = mutagen.File(self.filename, easy=True)
             tag.add_tags()
-        tag[u"title"] = self.title
-        tag[u"artist"] = self.podcast_name
-        tag[u"album"] = self.podcast_name
-        tag[u"albumartist"] = self.podcast_name
-        tag[u"genre"] = "Podcast"
+        tag["title"] = self.title
+        tag["artist"] = self.podcast_name
+        tag["album"] = self.podcast_name
+        tag["albumartist"] = self.podcast_name
+        tag["genre"] = "Podcast"
         tag.save(self.filename)
         self._logger.info(f"Tagged {self.filename}")
 

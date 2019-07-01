@@ -1,62 +1,82 @@
-"""Contain logging utility functions."""
+"""Contain utility functions."""
 
-import logging
-from logging.handlers import RotatingFileHandler
-from os import getenv, mkdir, path
 import pathlib
 
+from podd.database import Options
 from podd.settings import Config
 
 
-def logger(
-    name, log_directory=Config.log_directory, level=logging.DEBUG
-) -> logging.getLogger:
-    """Create logger.
-
-    :param name: name of logger
-    :param log_directory: directory in which to save logs
-    :param level: logging level to use with this logger
-    :return: logging.getLogger
+def bootstrap_app(database: str = Config.database) -> None:
+    """Create database file, ask user for download and log directories, create said directories.
+    :type database: str
+    :param database: location of database file.  By default, it's in the same
+    directory as `podd.settings`
     """
-    if not log_directory:
-        filename = logger_setup(name)
-    else:
-        filename = pathlib.Path(log_directory) / f"{name}.log"
-    log = logging.getLogger(name)
-    log.setLevel(level)
-    fmt = logging.Formatter(
-        "%(asctime)s [%(filename)s] func: [%(funcName)s] [%(levelname)s] "
-        "line: [%(lineno)d] %(message)s"
-    )
-    # delay=True delays opening file until actually needed, preventing I/O errors
-    # That one was fun to figure out
-    file_hdlr = RotatingFileHandler(
-        filename=filename, delay=True, backupCount=5, maxBytes=2000000
-    )
-    file_hdlr.setLevel(level)
-    file_hdlr.setFormatter(fmt)
-    if not log.handlers:
-        log.addHandler(file_hdlr)
-    return log
+
+    # Look for database file
+    for file in pathlib.Path(database).parent.iterdir():
+        # If database file is found, return early
+        if database == str(file):
+            return
+    # Otherwise, bootstrap application:
+
+    # Define database structure
+    with Options(database) as _db:
+        cur = _db.cursor
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS podcasts "
+            "(id INTEGER PRIMARY KEY, "
+            "name TEXT, "
+            "url TEXT UNIQUE, "
+            "directory TEXT)"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS episodes "
+            "(id INTEGER PRIMARY KEY, "
+            "feed_id TEXT, "
+            "podcast_id INTEGER NOT NULL,"
+            "FOREIGN KEY (podcast_id) REFERENCES podcasts(id))"
+        )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS settings "
+            "(id INTEGER PRIMARY KEY, "
+            "download_directory TEXT,"
+            "notification_status BOOLEAN,"
+            "sender_address TEXT,"
+            "recipient_address TEXT)"
+        )
+        # Ensure that log_dir exists
+        Config.log_directory.mkdir(exist_ok=True, parents=True)
+        # Get user input for where to put download directory, add to db
+        dl_dir = get_directory(
+            name="Download directory", default=pathlib.Path.home() / "Podcasts"
+        )
+        cur.execute(
+            "INSERT INTO settings (download_directory, notification_status) VALUES (?,?)",
+            (str(dl_dir), False),
+        )
+        # Do email notification setup.
+        _db.email_notification_setup(initial_setup=True)
 
 
-def logger_setup(name: str) -> str:
-    """Setup logger.
-
-    :param name: name of log file.
-    Makes general log directory in home folder, then Podd directory inside
-    that.  This is a userland utility, therefore creating logs in /var/log
-    would require `sudo` access, which isn't a great idea.
-    Creates log directory in $HOME, and then Podd directory inside that.
-
-    :return: name of log file
-    """
-    home = getenv("HOME")
-    log_dir = path.join(home, "logs")
-    podd_dir = path.join(log_dir, "Podd")
-    if not path.exists(log_dir):
-        mkdir(log_dir)
-    if not path.exists(podd_dir):
-        mkdir(podd_dir)
-    log_file = path.join(podd_dir, f"{name}.log")
-    return log_file
+def get_directory(name: str, default: pathlib.Path) -> pathlib.Path:
+    """Prompt user for directory, create and then return path."""
+    while True:
+        prompt = f"{name} (Leave blank for {default}): "
+        raw_input = input(prompt)
+        if not raw_input:
+            path = default
+        elif raw_input[0] == "~":
+            path = pathlib.Path("~").expanduser()
+            try:
+                if raw_input[1] == "/":
+                    path /= raw_input[2:]
+            except IndexError:
+                pass  # Catch case where user enters just `~` or `~/`
+        else:
+            path = pathlib.Path(raw_input)
+        try:
+            path.mkdir(exist_ok=True, parents=True)
+            return path
+        except (IOError, PermissionError, OSError) as err:
+            print(f"Invalid directory: {err}")

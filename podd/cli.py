@@ -7,12 +7,6 @@ from podd.database import Feed, Options
 from podd.downloader import downloader
 
 
-@click.group()
-def cli_group():
-    """Group cli commands"""
-    pass
-
-
 @click.command()
 @click.option(
     "--catalog",
@@ -90,6 +84,12 @@ def remove():
 def version():
     """Print version number."""
     click.echo(Config.version)
+
+
+@click.group()
+def cli_group():
+    """Group cli commands"""
+    pass
 
 
 cli_group.add_command(add)
