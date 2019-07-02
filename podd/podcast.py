@@ -2,8 +2,9 @@
 
 from http import client
 from os import path
+import re
 from ssl import CertificateError
-import typing
+import typing as tp
 from urllib.error import HTTPError, URLError
 
 import feedparser as fp
@@ -16,9 +17,11 @@ from requests.exceptions import ConnectionError
 
 from podd.database import Database
 from podd.logger import logger
+from podd.utilities import compile_regex
 
 # Some podcast feeds send a silly amount of headers, crashing downloader func. Default is 100
 client._MAXHEADERS = 1000
+PATTERNS: tp.List[re.compile] = compile_regex()
 
 
 class Podcast:
@@ -50,7 +53,7 @@ class Podcast:
         self._url = url
         self._dl_dir = directory
         self._logger = logger(f"{self.__class__.__name__}")
-        self.episodes: typing.List[Episode] = []
+        self.episodes: tp.List[Episode] = []
         _old_eps = Database().get_episodes(self._url)
         _feed: fp.FeedParserDict = fp.parse(self._url)
         self._name = _feed.feed.get("title", default=self._url)
@@ -275,25 +278,46 @@ class Episode:
             self._logger.info(f"Adding header to {self.filename}")
             tag = mutagen.File(self.filename, easy=True)
             tag.add_tags()
+
+        ep_num = self._episode_num_parser()
         tag["title"] = self.title
         tag["artist"] = self.podcast_name
         tag["album"] = self.podcast_name
         tag["albumartist"] = self.podcast_name
         tag["genre"] = "Podcast"
+        if ep_num:
+            tag["tracknumber"] = ep_num
         tag.save(self.filename)
         self._logger.info(f"Tagged {self.filename}")
 
     def _mp4_tagger(self) -> None:
         """Tag mp4 files.
 
-        Uses mutagen to write tags to mp4 file
+        Per https://mutagen.readthedocs.io/en/latest/api/mp4.html#mutagen.mp4.MP4Tags,
+        track numbers are tuples of ints, first being track number, the second is
+        the total number of tracks, e.g.,  Album X has 10 tracks, we want to tag the
+        3rd track, so `tag['trkn'] = (3, 10)`, the weird syntax is because mutagen
+        supports multiple keys per track number.  I wish the documentation was
+        clearer.  One was chosen as the track count as I had to choose some number:
+        leaving it blank isn't an option.
+
         :return: None
         """
-        tag = mutagen.mp4.MP4(self.filename).tags
+        ep_num = self._episode_num_parser()
+        tag = MP4(self.filename).tags
         tag["\xa9nam"] = self.title
         tag["\xa9ART"] = self.podcast_name  # Artist
         tag["\xa9alb"] = self.podcast_name  # Album
         tag["aART"] = self.podcast_name  # Album artist
         tag["\xa9gen"] = "Podcast"  # Genre
+        if ep_num:
+            tag['trkn'] = (ep_num, 1),  # I know this is weird: see docstring
         tag.save(self.filename)
         self._logger.info(f"Tagged {self.filename}")
+
+    def _episode_num_parser(self) -> str or None:
+        """Attempt to parse episode number from title."""
+        for pattern in PATTERNS:
+            match = pattern.search(self.title)
+            if match:
+                return match.groups()[0]

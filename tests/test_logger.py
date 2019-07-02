@@ -2,7 +2,7 @@ from os import listdir, remove
 import pathlib
 import unittest
 
-from podd.utilities import logger
+from podd.logger import logger
 
 TEST_LOG = pathlib.Path(__file__).parent.parent / 'podd' / 'Logs'
 
