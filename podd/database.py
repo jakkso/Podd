@@ -10,7 +10,7 @@ import feedparser as fp
 import keyring
 
 from podd.settings import Config
-from podd.utilities import logger
+from podd.logger import logger
 
 
 class Database:
@@ -156,8 +156,6 @@ class Database:
         """
         self.cursor.execute(f"UPDATE settings SET {option} = ? WHERE id = 1", (value,))
         self._conn.commit()
-        if option == "sender_password":
-            value = "REDACTED"
         self._logger.info(f"Changed {option} to {value}")
 
 
@@ -189,7 +187,6 @@ class Feed(Database):
                 self._logger.warning(msg)
             else:
                 podcast_name = feed.feed.title
-                # podcast_dir = path.join(dl_dir, podcast_name)
                 podcast_dir = pathlib.Path(dl_dir).joinpath(podcast_name)
                 podcast_dir.mkdir(parents=True, exist_ok=True)
                 self.add_podcast(
@@ -215,21 +212,21 @@ class Feed(Database):
         """
         podcasts = {i[0]: i[1] for i in enumerate(self.get_podcasts())}
         if not podcasts:
-            print("You have no subscriptions!")
-            return
+            return print("You have no subscriptions!")
         for num, podcast in podcasts.items():
             print(f"{num}: {podcast[0]}")
         try:
-            choice = int(input("Podcast number to remove: "))
-            if choice not in podcasts:
-                print("Invalid option")
-                return
-            self.remove_podcast(podcasts[choice][1])
-            msg = f"Removed {podcasts[choice][0]}"
-            print(msg)
-            self._logger.info(msg)
+            choices = [int(i) for i in input("Podcast number(s) to remove: ").split()]
+            for choice in choices:
+                if choice not in podcasts:
+                    print(f"Invalid option {choice}")
+                else:
+                    self.remove_podcast(podcasts[choice][1])
+                    msg = f"Removed {podcasts[choice][0]}"
+                    print(msg)
+                    self._logger.info(msg)
         except ValueError:
-            print("Invalid option, enter a number")
+            print("Invalid option, enter numbers only.")
         except KeyboardInterrupt:
             print("\nCanceled")
 
@@ -305,15 +302,17 @@ class Options(Database):
             provided credentials
             :return: bool, True if login attempt was successful, False otherwise
             """
-            server = smtplib.SMTP(host=Config.host, port=Config.port)
-            server.starttls()
             try:
+                server = smtplib.SMTP(host=Config.host, port=Config.port)
+                server.starttls()
                 status_code = server.login(user=sender_address, password=password)[0]
                 server.quit()
                 if status_code == 235:
                     return True
             except smtplib.SMTPAuthenticationError:
                 pass
+            except TimeoutError as err:
+                print(err)
             return False
 
         if initial_setup:
@@ -342,7 +341,7 @@ class Options(Database):
             password = getpass.getpass("Password: ")
             print("Validating password...")
             if not credential_validation():
-                msg = "Login attempt failed!  Bad username or password!"
+                msg = "Login attempt failed!  Bad credentials, or connection timeout."
                 self._logger.warning(msg)
                 print(msg)
                 return
@@ -398,60 +397,3 @@ class Options(Database):
         print(msg)
         self._logger.warning(msg)
         return False
-
-
-def create_database(database: str = Config.database) -> bool:
-    """Create database.
-
-    Looks in the directory of the given filename, if the file is absent,
-    it creates the database with default values.
-    :param database: string, abs path of database file
-    :return: None
-    """
-    exists = False
-    for file in pathlib.Path(database).parent.iterdir():
-        if database == str(file):
-            exists = True
-            break
-    if not exists:
-        sender, recipient, notifications = "", "", False
-        with Database(database) as _db:
-            cur = _db.cursor
-            cur.execute(
-                "CREATE TABLE IF NOT EXISTS podcasts "
-                "(id INTEGER PRIMARY KEY, "
-                "name TEXT, "
-                "url TEXT UNIQUE, "
-                "directory TEXT)"
-            )
-            cur.execute(
-                "CREATE TABLE IF NOT EXISTS episodes "
-                "(id INTEGER PRIMARY KEY, "
-                "feed_id TEXT, "
-                "podcast_id INTEGER NOT NULL,"
-                "FOREIGN KEY (podcast_id) REFERENCES podcasts(id))"
-            )
-            cur.execute(
-                "CREATE TABLE IF NOT EXISTS settings "
-                "(id INTEGER PRIMARY KEY, "
-                "download_directory TEXT,"
-                "notification_status BOOLEAN,"
-                "sender_address TEXT,"
-                "recipient_address TEXT)"
-            )
-            cur.execute(
-                "INSERT INTO settings ("
-                " download_directory,"
-                " notification_status,"
-                " sender_address,"
-                " recipient_address) VALUES (?,?,?,?)",
-                (
-                    str(pathlib.Path.home().joinpath("Podcasts")),
-                    notifications,
-                    sender,
-                    recipient,
-                ),
-            )
-        pathlib.Path(__file__).parent.joinpath("Logs").mkdir(exist_ok=True)
-        return True
-    return False

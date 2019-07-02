@@ -7,12 +7,6 @@ from podd.database import Feed, Options
 from podd.downloader import downloader
 
 
-@click.group()
-def cli_group():
-    """Group cli commands"""
-    pass
-
-
 @click.command()
 @click.option(
     "--catalog",
@@ -51,13 +45,13 @@ def add(feed: str, catalog: bool, file: bool):
 
 @click.command()
 @click.argument("directory")
-def directory(directory: str):
+def dir(directory: str):
     """Set download directory."""
     Options().set_directory_option(directory)
 
 
 @click.command()
-def download():
+def dl():
     """Download all new episodes."""
     downloader()
 
@@ -75,28 +69,34 @@ def ls():
 
 
 @click.command()
-def options():
+def opt():
     """Print currently set options."""
     Options().print_options()
 
 
 @click.command()
-def remove():
+def rm():
     """Interactive subscription deletion menu."""
     Feed().remove()
 
 
 @click.command()
-def version():
+def v():
     """Print version number."""
     click.echo(Config.version)
 
 
+@click.group()
+def cli_group():
+    """Group cli commands"""
+    pass
+
+
 cli_group.add_command(add)
-cli_group.add_command(directory)
-cli_group.add_command(download)
+cli_group.add_command(dir)
+cli_group.add_command(dl)
 cli_group.add_command(email)
 cli_group.add_command(ls)
-cli_group.add_command(options)
-cli_group.add_command(remove)
-cli_group.add_command(version)
+cli_group.add_command(opt)
+cli_group.add_command(rm)
+cli_group.add_command(v)

@@ -15,8 +15,9 @@ class Config:
     `log_directory` by default is `~/logs/Podd`.  If you specify another path, logs
     will be placed in that directory
     """
+
     host = "smtp.gmail.com"
     port = 587
-    database = str(pathlib.Path(__file__).parent.joinpath("podcasts.db"))
+    database = str(pathlib.Path(__file__).parent / "podcasts.db")
     version = "0.1.16"
-    log_directory = None
+    log_directory = pathlib.Path.home() / "logs" / "Podd"

@@ -8,14 +8,20 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from podd.podcast import Episode
 from podd.settings import Config
-from podd.utilities import logger
+from podd.logger import logger
 
 
 class Message:
     """Render and send emails."""
 
     __slots__ = [
-        "logger", "podcasts", "text", "html", "sender", "password", "recipient"
+        "logger",
+        "podcasts",
+        "text",
+        "html",
+        "sender",
+        "password",
+        "recipient",
     ]
 
     def __init__(
@@ -33,14 +39,14 @@ class Message:
         self.sender = sender
         self.password = password
         self.recipient = recipient
-        self.logger = logger("message")
+        self.logger = logger(f"{self.__class__.__name__}")
         self.podcasts = podcasts
         self.text = self.render_text()
         self.html = self.render_html()
 
     def __repr__(self):
         """`repr` method."""
-        return f"{self.__class__.__name__}({self.podcasts})"
+        return f"{self.__class__.__name__}({self.podcasts}, {self.sender}, {self.password}, {self.recipient})"
 
     def render_html(self):
         """Render HTML email.

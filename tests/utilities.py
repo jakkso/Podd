@@ -1,4 +1,3 @@
-import getpass
 from os import listdir, path
 import pathlib
 from pickle import dump, load

@@ -1,5 +1,5 @@
 # Misc Data files, log files, backup config file, etc
-podd/podcasts.db
+podcasts.db
 *.log*
 testfiles/
 feeds.txt
