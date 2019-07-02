@@ -16,7 +16,11 @@ def downloader() -> None:
     """
     with Database() as _db:
         _, send_notifications, _ = _db.get_options()
-        sender, password, recipient = _db.get_credentials()
+        if send_notifications:
+            sender, password, recipient = _db.get_credentials()
+            if not password:
+                send_notifications = False
+                print('Unable to fetch password from keyring, notifications disabled.')
         podcasts, eps_to_download = threaded_update(_db.get_podcasts())
     if podcasts and eps_to_download:
         threaded_downloader(eps_to_download)

@@ -8,6 +8,7 @@ from types import TracebackType
 
 import feedparser as fp
 import keyring
+from keyring.errors import KeyringError
 
 from podd.settings import Config
 from podd.logger import logger
@@ -138,7 +139,10 @@ class Database:
             "SELECT sender_address, " "recipient_address from settings where id = 1"
         )
         sender, recipient = self.cursor.fetchone()
-        password = keyring.get_password("podd", sender)
+        try:
+            password = keyring.get_password("podd", sender)
+        except KeyringError:
+            password = None
         return sender, password, recipient
 
     def change_option(self, option: str, value: str or int) -> None:
