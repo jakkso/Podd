@@ -187,7 +187,6 @@ class Feed(Database):
                 self._logger.warning(msg)
             else:
                 podcast_name = feed.feed.title
-                # podcast_dir = path.join(dl_dir, podcast_name)
                 podcast_dir = pathlib.Path(dl_dir).joinpath(podcast_name)
                 podcast_dir.mkdir(parents=True, exist_ok=True)
                 self.add_podcast(
@@ -213,21 +212,21 @@ class Feed(Database):
         """
         podcasts = {i[0]: i[1] for i in enumerate(self.get_podcasts())}
         if not podcasts:
-            print("You have no subscriptions!")
-            return
+            return print("You have no subscriptions!")
         for num, podcast in podcasts.items():
             print(f"{num}: {podcast[0]}")
         try:
-            choice = int(input("Podcast number to remove: "))
-            if choice not in podcasts:
-                print("Invalid option")
-                return
-            self.remove_podcast(podcasts[choice][1])
-            msg = f"Removed {podcasts[choice][0]}"
-            print(msg)
-            self._logger.info(msg)
+            choices = [int(i) for i in input("Podcast number(s) to remove: ").split()]
+            for choice in choices:
+                if choice not in podcasts:
+                    print(f"Invalid option {choice}")
+                else:
+                    self.remove_podcast(podcasts[choice][1])
+                    msg = f"Removed {podcasts[choice][0]}"
+                    print(msg)
+                    self._logger.info(msg)
         except ValueError:
-            print("Invalid option, enter a number")
+            print("Invalid option, enter numbers only.")
         except KeyboardInterrupt:
             print("\nCanceled")
 
