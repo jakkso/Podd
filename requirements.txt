@@ -9,4 +9,4 @@ keyring==19.0.1
 MarkupSafe==1.1.1
 mutagen==1.42.0
 requests==2.22.0
-urllib3==1.25.3
+urllib3==1.26.5
