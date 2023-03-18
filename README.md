@@ -44,7 +44,7 @@ In your terminal of choice, enter `python3 podd.py` followed by one of the follo
 | `dl` | Run download routine |
 | `email` | Run email credential storage routine.  Password is stored in OS keyring.|
 | `ls` | Print list of subscriptions |
-| `add [--all] [--file] $FEED` | Subscribe to podcast with an rss feed url.  
+| `add [--catalog] [--file] $FEED` | Subscribe to podcast with an rss feed url.  
 |`--all` | If set, then all available episodes will be downloaded when `download` command is run.|
 |`--file`| If set, `$FEED` will be treated as a file with a single RSS feed URL per line and `podd` will attempt to add each line as a separate RSS feed URL.|
 | `rm` | Display the deletion menu |
